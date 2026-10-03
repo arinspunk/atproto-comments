@@ -1,6 +1,6 @@
 {
   "name": "atproto-comments",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Web Component for displaying AT Protocol comments on any website",
   "type": "module",
   "scripts": {
