@@ -532,6 +532,33 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
 
 // --- Web Component ---
 
+/**
+ * Web Component that displays AT Protocol (Bluesky, Mu, Deer, etc.) comments
+ * for a given post thread.
+ *
+ * @example
+ * ```html
+ * <atproto-comments
+ *   thread-uri="at://did:plc:xxxx/app.bsky.feed.post/yyyy"
+ * ></atproto-comments>
+ * ```
+ *
+ * Attributes:
+ * - `thread-uri` (required) — AT URI of the anchor post
+ * - `appview` — AppView base URL (default: `https://public.api.bsky.app`)
+ * - `lang` — language code for UI strings: `en` or `pt` (default: `<html lang>` or `"en"`)
+ * - `max-depth` — maximum reply depth to load (default: `6`)
+ *
+ * Theming via CSS custom properties: `--atproto-font-family`, `--atproto-font-size`,
+ * `--atproto-color-text`, `--atproto-color-muted`, `--atproto-color-border`,
+ * `--atproto-color-surface`, `--atproto-avatar-size`, `--atproto-avatar-bg`,
+ * `--atproto-avatar-color`.
+ *
+ * Use {@link AtprotoComments} to register under a custom element name:
+ * ```js
+ * customElements.define('my-comments', AtprotoComments);
+ * ```
+ */
 export class AtprotoComments extends HTMLElement {
   static observedAttributes = ["thread-uri", "appview", "lang", "max-depth"];
 
