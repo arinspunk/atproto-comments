@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "build": "deno run --allow-read --allow-write --allow-env --allow-run scripts/build.ts",
+    "check": "deno run --allow-read --allow-env npm:typescript/bin/tsc --noEmit",
+    "test": "deno test --allow-env src/"
+  },
+  "imports": {
+    "typescript": "npm:typescript@^5.5.0"
+  }
+}

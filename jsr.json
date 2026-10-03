@@ -1,0 +1,16 @@
+{
+  "name": "@arinspunk/atproto-comments",
+  "version": "1.0.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./style.css": "./src/atproto-comments.css"
+  },
+  "publish": {
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.css",
+      "LICENSE",
+      "README.md"
+    ]
+  }
+}

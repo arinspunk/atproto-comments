@@ -1,0 +1,43 @@
+{
+  "name": "atproto-comments",
+  "version": "1.0.0",
+  "description": "Web Component for displaying AT Protocol (Bluesky) comments on any website",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "check": "tsc --noEmit"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.umd.js"
+    },
+    "./style.css": "./dist/atproto-comments.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "atproto",
+    "bluesky",
+    "comments",
+    "web-component",
+    "custom-element"
+  ],
+  "author": "arinspunk",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arinspunk/atproto-comments.git"
+  },
+  "homepage": "https://github.com/arinspunk/atproto-comments#readme",
+  "bugs": {
+    "url": "https://github.com/arinspunk/atproto-comments/issues"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.1",
+    "typescript": "^5.9.3"
+  }
+}
