@@ -1,6 +1,6 @@
 # atproto-comments
 
-Web Component for displaying AT Protocol (Bluesky) comments on any website. Drop it in, point it at a Bluesky post, done.
+Web Component for displaying AT Protocol comments on any website. Drop it in, point it at a post, done.
 
 ## Install
 
@@ -28,13 +28,33 @@ import 'atproto-comments/style.css';
 import 'jsr:@arinspunk/atproto-comments';
 ```
 
-## Usage
+## How it works
+
+This component handles **display only** — it fetches and renders replies to an AT Protocol post. You are responsible for creating that post and supplying its AT URI.
+
+The typical flow:
+
+1. Publish a post on your site
+2. Create an AT Protocol post that links to it (this is your anchor post)
+3. Copy the AT URI — `at://<did>/app.bsky.feed.post/<rkey>` — and pass it to the component:
 
 ```html
 <atproto-comments
   thread-uri="at://did:plc:xxxx/app.bsky.feed.post/yyyy"
 ></atproto-comments>
 ```
+
+Any replies to that post appear as comments on your page. No authentication required from visitors.
+
+### Where to create your account
+
+AT Protocol is an open protocol — your account is not tied to any specific app or server. You choose where your data lives (your [PDS](https://en.wikipedia.org/wiki/AT_Protocol#Personal_Data_Servers)) and which app you use to interact.
+
+**[Eurosky](https://eurosky.tech/)** is a PDS hosted in Europe, under EU privacy law (GDPR). A good option if data residency matters to you. You can use **[Mu](https://mu.social)** as your client — it connects to any AT Protocol account regardless of where it's hosted.
+
+Bluesky is also a valid option: it runs its own PDS and app at [bsky.app](https://bsky.app).
+
+> **Getting the DID from a handle:** resolve it via `https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=<handle>`.
 
 ## Attributes
 

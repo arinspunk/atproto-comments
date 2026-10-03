@@ -1,7 +1,7 @@
 {
   "name": "atproto-comments",
-  "version": "1.0.0",
-  "description": "Web Component for displaying AT Protocol (Bluesky) comments on any website",
+  "version": "1.0.1",
+  "description": "Web Component for displaying AT Protocol comments on any website",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.js",
