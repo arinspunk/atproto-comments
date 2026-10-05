@@ -1,3 +1,15 @@
+/**
+ * @module
+ * Web Component for displaying AT Protocol comments on any website.
+ *
+ * @example
+ * ```html
+ * <atproto-comments
+ *   thread-uri="at://did:plc:xxxx/app.bsky.feed.post/yyyy"
+ * ></atproto-comments>
+ * ```
+ */
+
 // --- Types ---
 
 interface Label {
@@ -533,30 +545,27 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
 // --- Web Component ---
 
 /**
- * Web Component that displays AT Protocol (Bluesky, Mu, Deer, etc.) comments
- * for a given post thread.
+ * Web Component that displays AT Protocol comments for a given post thread.
+ *
+ * Fetches replies from an AT Protocol AppView and renders them as a comment
+ * section. No visitor authentication required.
+ *
+ * **Attributes**
+ * - `thread-uri` (required) — AT URI of the anchor post (`at://did/app.bsky.feed.post/rkey`)
+ * - `appview` — AppView base URL (default: `https://public.api.bsky.app`)
+ * - `lang` — UI language, `en` or `pt` (default: inherits from `html[lang]`)
+ * - `max-depth` — maximum reply depth (default: `6`)
+ *
+ * **Theming** via CSS custom properties on the `atproto-comments` selector:
+ * `--atproto-font-family`, `--atproto-font-size`, `--atproto-color-text`,
+ * `--atproto-color-muted`, `--atproto-color-border`, `--atproto-color-surface`,
+ * `--atproto-avatar-size`, `--atproto-avatar-bg`, `--atproto-avatar-color`.
  *
  * @example
  * ```html
  * <atproto-comments
  *   thread-uri="at://did:plc:xxxx/app.bsky.feed.post/yyyy"
  * ></atproto-comments>
- * ```
- *
- * Attributes:
- * - `thread-uri` (required) — AT URI of the anchor post
- * - `appview` — AppView base URL (default: `https://public.api.bsky.app`)
- * - `lang` — language code for UI strings: `en` or `pt` (default: `<html lang>` or `"en"`)
- * - `max-depth` — maximum reply depth to load (default: `6`)
- *
- * Theming via CSS custom properties: `--atproto-font-family`, `--atproto-font-size`,
- * `--atproto-color-text`, `--atproto-color-muted`, `--atproto-color-border`,
- * `--atproto-color-surface`, `--atproto-avatar-size`, `--atproto-avatar-bg`,
- * `--atproto-avatar-color`.
- *
- * Use {@link AtprotoComments} to register under a custom element name:
- * ```js
- * customElements.define('my-comments', AtprotoComments);
  * ```
  */
 export class AtprotoComments extends HTMLElement {
