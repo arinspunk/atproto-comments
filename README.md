@@ -62,8 +62,59 @@ Bluesky is also a valid option: it runs its own PDS and app at [bsky.app](https:
 |---|---|---|---|
 | `thread-uri` | Yes | — | AT URI of the anchor post (`at://did/app.bsky.feed.post/rkey`) |
 | `appview` | No | `https://public.api.bsky.app` | AppView base URL |
-| `lang` | No | `<html lang>` or `"en"` | Language code for UI strings (`en`, `pt`) |
+| `lang` | No | `<html lang>` or `"en"` | Language tag. Picks the bundled UI strings (`en`, `pt`; others fall back to `en`) and formats dates (any BCP 47 tag, e.g. `es-ES`) |
+| `strings` | No | — | JSON object overriding UI strings by key. See [UI strings](#ui-strings) |
 | `max-depth` | No | `6` | Maximum reply depth to load |
+
+## UI strings
+
+The component bundles English and Portuguese. For any other language, pass your own strings. Only the keys you provide are replaced; the rest come from the bundled dictionary for `lang`, or English.
+
+```html
+<atproto-comments
+  thread-uri="at://did:plc:xxxx/app.bsky.feed.post/yyyy"
+  lang="es-ES"
+  strings='{"comment":"Comentar","reply":"Responder","replyTo":"Responder a {name}"}'
+></atproto-comments>
+```
+
+From PHP (e.g. WordPress), let `wp_json_encode` and `esc_attr` handle quoting:
+
+```php
+<atproto-comments
+  thread-uri="<?php echo esc_attr( $thread_uri ); ?>"
+  strings="<?php echo esc_attr( wp_json_encode( [ 'comment' => __( 'Comment', 'my-textdomain' ) ] ) ); ?>"
+></atproto-comments>
+```
+
+Or set the `strings` property, which takes priority over the attribute key by key. Set it **before** the element is inserted into the document — strings are read once, when the element connects:
+
+```js
+const el = document.createElement('atproto-comments');
+el.setAttribute('thread-uri', threadUri);
+el.strings = { comment: 'Kommentieren', reply: 'Antworten' };
+container.append(el);
+```
+
+Invalid JSON, unknown keys and non-string values are ignored.
+
+| Key | English default | Notes |
+|---|---|---|
+| `comment` | `Comment` | Main button |
+| `reply` | `Reply` | Button under each reply |
+| `replyTo` | `Reply to {name}` | Accessible label of the reply button; `{name}` is the author |
+| `otherApp` | `Other app` | Separator in the app picker |
+| `inputPlaceholder` | `app.example` | Placeholder of the custom app domain input |
+| `invalidDomain` | `Invalid domain` | Reserved for custom domain validation |
+| `error` | `Comments couldn't be loaded.` | Load error message |
+| `viewMore` | `View more on Bluesky` | Link when a reply has unloaded replies |
+| `now` | `now` | Relative time under one minute |
+| `minutes` | `m` | Relative time unit, shown as `5 m` |
+| `hours` | `h` | Relative time unit |
+| `days` | `d` | Relative time unit |
+| `months` | `mo` | Relative time unit |
+
+With JSR, the key types are exported: `import type { StringKey, UiStrings } from 'jsr:@arinspunk/atproto-comments';`
 
 ## Theming
 
@@ -112,7 +163,7 @@ const threadUri = `at://${did}/app.bsky.feed.post/${rkey}`;
 
 ```html
 <atproto-comments
-  data-thread-uri="at://{{ atproto.did }}/app.bsky.feed.post/{{ rkey }}"
+  thread-uri="at://{{ atproto.did }}/app.bsky.feed.post/{{ rkey }}"
 ></atproto-comments>
 ```
 

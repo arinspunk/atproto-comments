@@ -10,6 +10,19 @@
  * ```
  */
 
+import {
+  buildStrings,
+  parseStringsAttr,
+  resolveLang,
+  resolveLocale,
+  type ResolvedStrings,
+  type StringKey,
+  translate,
+  type UiStrings,
+} from "./i18n.ts";
+
+export type { StringKey, UiStrings } from "./i18n.ts";
+
 // --- Types ---
 
 interface Label {
@@ -64,40 +77,11 @@ interface ThreadViewPost {
 
 // --- i18n ---
 
-type Lang = "pt" | "en";
-
-const I18N: Record<Lang, Record<string, string>> = {
-  pt: {
-    reply: "Responder",
-    replyTo: "Responder a {name}",
-    comment: "Comentar",
-    otherApp: "Outra app",
-    inputPlaceholder: "app.exemplo",
-    error: "Não foi possível carregar os comentários.",
-    now: "agora",
-    minutes: "m",
-    hours: "h",
-    days: "d",
-    months: "me",
-    viewMore: "Ver mais no Bluesky",
-    invalidDomain: "Domínio inválido",
-  },
-  en: {
-    reply: "Reply",
-    replyTo: "Reply to {name}",
-    comment: "Comment",
-    otherApp: "Other app",
-    inputPlaceholder: "app.example",
-    error: "Comments couldn't be loaded.",
-    now: "now",
-    minutes: "m",
-    hours: "h",
-    days: "d",
-    months: "mo",
-    viewMore: "View more on Bluesky",
-    invalidDomain: "Invalid domain",
-  },
-};
+/** Resolved UI strings plus the BCP 47 locale used for date formatting. */
+interface Loc {
+  strings: ResolvedStrings;
+  locale: string;
+}
 
 const KNOWN_APPS = [
   { label: "Bluesky", domain: "bsky.app" },
@@ -127,26 +111,9 @@ function isValidDate(iso: string | undefined): iso is string {
   return !Number.isNaN(new Date(iso).getTime());
 }
 
-function resolveLang(attr: string | null): Lang {
-  const raw = attr ?? document.documentElement.lang ?? "";
-  const code = raw.split("-")[0].toLowerCase();
-  return (code in I18N ? code : "en") as Lang;
-}
-
-function translate(lang: Lang, key: string, vars?: Record<string, string>): string {
-  const dict = I18N[lang] ?? I18N.en;
-  let str = dict[key] ?? I18N.en[key] ?? key;
-  if (vars) {
-    for (const [k, v] of Object.entries(vars)) {
-      str = str.replaceAll(`{${k}}`, v);
-    }
-  }
-  return str;
-}
-
-function formatRelativeTime(iso: string, lang: Lang): string {
+function formatRelativeTime(iso: string, loc: Loc): string {
   if (!isValidDate(iso)) return "";
-  const t = (k: string) => translate(lang, k);
+  const t = (k: StringKey) => translate(loc.strings, k);
   const delta = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (delta < 60) return t("now");
   if (delta < 3600) return `${Math.floor(delta / 60)} ${t("minutes")}`;
@@ -157,10 +124,10 @@ function formatRelativeTime(iso: string, lang: Lang): string {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
-function formatAbsoluteDate(iso: string, lang: Lang): string {
+function formatAbsoluteDate(iso: string, loc: Loc): string {
   if (!isValidDate(iso)) return "";
   try {
-    return new Intl.DateTimeFormat(lang, { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+    return new Intl.DateTimeFormat(loc.locale, { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
   } catch {
     return iso;
   }
@@ -297,14 +264,14 @@ function buildAvatarWrap(author: ProfileViewBasic): HTMLElement {
 
 let popoverCounter = 0;
 
-function buildAppPopover(targetDid: string, targetRkey: string, popoverId: string, lang: Lang): HTMLElement {
+function buildAppPopover(targetDid: string, targetRkey: string, popoverId: string, loc: Loc): HTMLElement {
   const preferred = localStorage.getItem(PREF_KEY);
   const popover = document.createElement("div");
   popover.id = popoverId;
   popover.setAttribute("popover", "");
   popover.className = "atproto-app-popover";
 
-  const t = (k: string) => translate(lang, k);
+  const t = (k: StringKey) => translate(loc.strings, k);
 
   for (const app of KNOWN_APPS) {
     const a = document.createElement("a");
@@ -377,7 +344,7 @@ function buildAppAction(
   label: string,
   targetDid: string,
   targetRkey: string,
-  lang: Lang,
+  loc: Loc,
   btnClass?: string,
   ariaLabel?: string,
 ): HTMLElement {
@@ -398,7 +365,7 @@ function buildAppAction(
 
   const id = `atproto-pop-${++popoverCounter}`;
   const btn = buildAppButton(label, id, btnClass, ariaLabel);
-  const popover = buildAppPopover(targetDid, targetRkey, id, lang);
+  const popover = buildAppPopover(targetDid, targetRkey, id, loc);
 
   let onScroll: (() => void) | null = null;
   let onResize: (() => void) | null = null;
@@ -449,15 +416,15 @@ function buildAppAction(
   return wrap;
 }
 
-function renderError(lang: Lang): HTMLElement {
+function renderError(loc: Loc): HTMLElement {
   const div = document.createElement("div");
   div.className = "atproto-comments__error";
   div.setAttribute("role", "status");
-  div.textContent = translate(lang, "error");
+  div.textContent = translate(loc.strings, "error");
   return div;
 }
 
-function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTMLElement | null {
+function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLElement | null {
   if (view.$type === "app.bsky.feed.defs#blockedPost") return null;
   if (view.$type !== "app.bsky.feed.defs#threadViewPost") return null;
   if (hidden.has(view.post?.uri ?? "")) return null;
@@ -495,8 +462,8 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
     const time = document.createElement("time");
     time.className = "atproto-reply__time";
     time.dateTime = record.createdAt;
-    time.textContent = formatRelativeTime(record.createdAt, lang);
-    time.title = formatAbsoluteDate(record.createdAt, lang);
+    time.textContent = formatRelativeTime(record.createdAt, loc);
+    time.title = formatAbsoluteDate(record.createdAt, loc);
     header.appendChild(time);
   }
 
@@ -509,8 +476,8 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
 
   const authorDid = author.did ?? "";
   const replyRkey = post.uri?.split("/").pop() ?? "";
-  const replyAria = translate(lang, "replyTo", { name: author.displayName ?? author.handle ?? "" });
-  content.appendChild(buildAppAction(translate(lang, "reply"), authorDid, replyRkey, lang, undefined, replyAria));
+  const replyAria = translate(loc.strings, "replyTo", { name: author.displayName ?? author.handle ?? "" });
+  content.appendChild(buildAppAction(translate(loc.strings, "reply"), authorDid, replyRkey, loc, undefined, replyAria));
 
   const loadedReplies = view.replies ?? [];
   if ((post.replyCount ?? 0) > loadedReplies.length) {
@@ -519,7 +486,7 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
     more.href = `https://bsky.app/profile/${authorDid}/post/${replyRkey}`;
     more.target = "_blank";
     more.rel = "noopener noreferrer";
-    more.textContent = translate(lang, "viewMore");
+    more.textContent = translate(loc.strings, "viewMore");
     content.appendChild(more);
   }
 
@@ -530,7 +497,7 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
     const subList = document.createElement("ol");
     subList.className = "atproto-reply__replies";
     for (const sub of subReplies) {
-      const child = renderReply(sub, hidden, lang);
+      const child = renderReply(sub, hidden, loc);
       if (child) subList.appendChild(child);
     }
     if (subList.lastElementChild) {
@@ -553,8 +520,14 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
  * **Attributes**
  * - `thread-uri` (required) — AT URI of the anchor post (`at://did/app.bsky.feed.post/rkey`)
  * - `appview` — AppView base URL (default: `https://public.api.bsky.app`)
- * - `lang` — UI language, `en` or `pt` (default: inherits from `html[lang]`)
+ * - `lang` — UI language and date locale (default: inherits from `html[lang]`).
+ *   Bundled dictionaries: `en`, `pt`; other languages fall back to `en` unless `strings` is set
+ * - `strings` — JSON object overriding UI strings by key, e.g. `{"comment":"Comentar"}`
  * - `max-depth` — maximum reply depth (default: `6`)
+ *
+ * **Properties**
+ * - `strings` — same as the attribute, as an object; takes priority over it.
+ *   Set it before the element is inserted into the document.
  *
  * **Theming** via CSS custom properties on the `atproto-comments` selector:
  * `--atproto-font-family`, `--atproto-font-size`, `--atproto-color-text`,
@@ -569,19 +542,43 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, lang: Lang): HTM
  * ```
  */
 export class AtprotoComments extends HTMLElement {
-  static observedAttributes = ["thread-uri", "appview", "lang", "max-depth"];
+  static observedAttributes = ["thread-uri", "appview", "lang", "max-depth", "strings"];
 
-  connectedCallback(): void {
-    const threadUri = this.getAttribute("thread-uri");
-    if (!threadUri || !threadUri.startsWith("at://")) {
-      this.appendChild(renderError(this.#lang));
-      return;
-    }
-    this.#load(threadUri);
+  #strings: UiStrings | undefined;
+
+  /** UI strings overriding the bundled dictionary by key. Read when the element connects. */
+  get strings(): UiStrings | undefined {
+    return this.#strings;
   }
 
-  get #lang(): Lang {
-    return resolveLang(this.getAttribute("lang"));
+  set strings(value: UiStrings | undefined) {
+    this.#strings = value;
+  }
+
+  connectedCallback(): void {
+    // A value assigned before the element was upgraded shadows the accessor; reapply it.
+    if (Object.prototype.hasOwnProperty.call(this, "strings")) {
+      const value = (this as { strings?: UiStrings }).strings;
+      delete (this as { strings?: UiStrings }).strings;
+      this.strings = value;
+    }
+
+    const loc = this.#loc();
+    const threadUri = this.getAttribute("thread-uri");
+    if (!threadUri || !threadUri.startsWith("at://")) {
+      this.appendChild(renderError(loc));
+      return;
+    }
+    this.#load(threadUri, loc);
+  }
+
+  #loc(): Loc {
+    const rawLang = this.getAttribute("lang") ?? document.documentElement.lang;
+    const lang = resolveLang(this.getAttribute("lang"), document.documentElement.lang);
+    return {
+      strings: buildStrings(lang, parseStringsAttr(this.getAttribute("strings")), this.#strings),
+      locale: resolveLocale(rawLang, lang),
+    };
   }
 
   get #appview(): string {
@@ -593,8 +590,7 @@ export class AtprotoComments extends HTMLElement {
     return Number.isFinite(v) && v > 0 ? v : DEFAULT_MAX_DEPTH;
   }
 
-  async #load(threadUri: string): Promise<void> {
-    const lang = this.#lang;
+  async #load(threadUri: string, loc: Loc): Promise<void> {
     const uriParts = threadUri.split("/");
     const rootDid = uriParts[2] ?? "";
     const rootRkey = uriParts[4] ?? "";
@@ -607,19 +603,19 @@ export class AtprotoComments extends HTMLElement {
       if (!res.ok) throw new Error(`${res.status}`);
       data = await res.json() as { thread: ThreadViewPost };
     } catch {
-      this.appendChild(renderError(lang));
+      this.appendChild(renderError(loc));
       return;
     }
 
     const thread = data.thread;
-    const commentLabel = translate(lang, "comment");
+    const commentLabel = translate(loc.strings, "comment");
 
     if (
       !thread ||
       thread.$type === "app.bsky.feed.defs#notFoundPost" ||
       thread.$type === "app.bsky.feed.defs#blockedPost"
     ) {
-      this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, lang, "atproto-app-btn--xl"));
+      this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl"));
       return;
     }
 
@@ -627,18 +623,18 @@ export class AtprotoComments extends HTMLElement {
     const replies = sortedReplies(thread.replies);
 
     if (replies.length === 0) {
-      this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, lang, "atproto-app-btn--xl"));
+      this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl"));
       return;
     }
 
     const list = document.createElement("ol");
     list.className = "atproto-comments__list";
     for (const reply of replies) {
-      const el = renderReply(reply, hidden, lang);
+      const el = renderReply(reply, hidden, loc);
       if (el) list.appendChild(el);
     }
     this.appendChild(list);
-    this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, lang, "atproto-app-btn--xl"));
+    this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl"));
   }
 }
 

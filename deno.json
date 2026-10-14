@@ -1,6 +1,6 @@
 {
   "name": "@arinspunk/atproto-comments",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "license": "MIT",
   "exports": "./src/index.ts",
   "publish": {
@@ -8,6 +8,9 @@
       "src/**/*.ts",
       "LICENSE",
       "README.md"
+    ],
+    "exclude": [
+      "src/**/*.test.ts"
     ]
   },
   "tasks": {
