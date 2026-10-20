@@ -28,6 +28,22 @@ import 'atproto-comments/style.css';
 import 'jsr:@arinspunk/atproto-comments';
 ```
 
+The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
+
+```html
+<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.1.1/src/atproto-comments.css">
+```
+
+Or, in a static site generator, download it at build time. For example, in Lume:
+
+```ts
+site.remoteFile(
+  "vendor/atproto-comments.css",
+  "https://jsr.io/@arinspunk/atproto-comments/1.1.1/src/atproto-comments.css",
+);
+site.copy("vendor/atproto-comments.css");
+```
+
 ## How it works
 
 This component handles **display only** — it fetches and renders replies to an AT Protocol post. You are responsible for creating that post and supplying its AT URI.
