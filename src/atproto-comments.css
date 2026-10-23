@@ -120,6 +120,13 @@ atproto-comments {
   gap: 0 0.25rem;
 }
 
+/* Name and handle share one flex item so the space between them is rendered
+   text (otherwise iOS reads "Name@handle.domain" as an email). */
+.atproto-reply__byline {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .atproto-reply__handle,
 .atproto-reply__time {
   color: var(--atproto-color-muted);
@@ -183,6 +190,22 @@ atproto-comments {
 }
 
 .atproto-app-popover:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Fallback panel for browsers without the Popover API (e.g. iOS < 17).
+   Kept out of the :popover-open rule: browsers that don't know that
+   pseudo-class drop every selector in the same list. */
+.atproto-app-popover--fallback {
+  position: fixed;
+  z-index: 2147483647;
+  color: CanvasText;
+  overflow: auto;
+}
+
+.atproto-app-popover--fallback:not([hidden]) {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;

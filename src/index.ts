@@ -21,6 +21,8 @@ import {
   type UiStrings,
 } from "./i18n.ts";
 
+import { bylineParts } from "./byline.ts";
+
 export type { StringKey, UiStrings } from "./i18n.ts";
 
 // --- Types ---
@@ -264,12 +266,27 @@ function buildAvatarWrap(author: ProfileViewBasic): HTMLElement {
 
 let popoverCounter = 0;
 
-function buildAppPopover(targetDid: string, targetRkey: string, popoverId: string, loc: Loc): HTMLElement {
+/** `close` of the open fallback panel. At most one is open at a time. */
+let openFallback: (() => void) | null = null;
+
+function buildAppPopover(
+  targetDid: string,
+  targetRkey: string,
+  popoverId: string,
+  loc: Loc,
+  close: () => void,
+): HTMLElement {
   const preferred = localStorage.getItem(PREF_KEY);
   const popover = document.createElement("div");
   popover.id = popoverId;
-  popover.setAttribute("popover", "");
   popover.className = "atproto-app-popover";
+  if (SUPPORTS_POPOVER) {
+    popover.setAttribute("popover", "");
+  } else {
+    // Without the Popover API the attribute is unknown and would not hide the panel.
+    popover.hidden = true;
+    popover.classList.add("atproto-app-popover--fallback");
+  }
 
   const t = (k: StringKey) => translate(loc.strings, k);
 
@@ -283,7 +300,7 @@ function buildAppPopover(targetDid: string, targetRkey: string, popoverId: strin
       (preferred === app.domain ? " atproto-app-popover__link--active" : "");
     a.addEventListener("click", () => {
       localStorage.setItem(PREF_KEY, app.domain);
-      (popover as HTMLElement & { hidePopover?: () => void }).hidePopover?.();
+      close();
     });
     popover.appendChild(a);
   }
@@ -316,7 +333,7 @@ function buildAppPopover(targetDid: string, targetRkey: string, popoverId: strin
     input.removeAttribute("aria-invalid");
     localStorage.setItem(PREF_KEY, domain);
     window.open(`https://${domain}/profile/${targetDid}/post/${targetRkey}`, "_blank", "noopener,noreferrer");
-    (popover as HTMLElement & { hidePopover?: () => void }).hidePopover?.();
+    close();
   }
 
   btn.addEventListener("click", openCustom);
@@ -332,8 +349,9 @@ function buildAppPopover(targetDid: string, targetRkey: string, popoverId: strin
 function buildAppButton(label: string, popoverId: string, extraClass?: string, ariaLabel?: string): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.setAttribute("popovertarget", popoverId);
+  btn.setAttribute(SUPPORTS_POPOVER ? "popovertarget" : "aria-controls", popoverId);
   btn.setAttribute("aria-haspopup", "true");
+  btn.setAttribute("aria-expanded", "false");
   btn.className = "atproto-app-btn" + (extraClass ? ` ${extraClass}` : "");
   btn.textContent = label;
   if (ariaLabel) btn.setAttribute("aria-label", ariaLabel);
@@ -351,65 +369,101 @@ function buildAppAction(
   const wrap = document.createElement("div");
   wrap.className = "atproto-app-action";
 
-  if (!SUPPORTS_POPOVER) {
-    const a = document.createElement("a");
-    a.className = "atproto-app-btn" + (btnClass ? ` ${btnClass}` : "");
-    a.href = `https://bsky.app/profile/${targetDid}/post/${targetRkey}`;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.textContent = label;
-    if (ariaLabel) a.setAttribute("aria-label", ariaLabel);
-    wrap.appendChild(a);
-    return wrap;
-  }
-
   const id = `atproto-pop-${++popoverCounter}`;
   const btn = buildAppButton(label, id, btnClass, ariaLabel);
-  const popover = buildAppPopover(targetDid, targetRkey, id, loc);
+  let close: () => void;
+  const popover = buildAppPopover(targetDid, targetRkey, id, loc, () => close());
 
-  let onScroll: (() => void) | null = null;
-  let onResize: (() => void) | null = null;
+  let onViewportChange: (() => void) | null = null;
 
-  const close = () => (popover as HTMLElement & { hidePopover?: () => void }).hidePopover?.();
-
-  popover.addEventListener("toggle", (e) => {
-    const te = e as ToggleEvent;
-    if (te.newState === "open") {
-      const preferred = localStorage.getItem(PREF_KEY);
-      for (const a of popover.querySelectorAll<HTMLAnchorElement>(".atproto-app-popover__link")) {
-        let hostname = "";
-        try { hostname = new URL(a.href).hostname; } catch { /* ignore */ }
-        a.classList.toggle("atproto-app-popover__link--active", hostname === preferred);
-      }
-      const input = popover.querySelector<HTMLInputElement>(".atproto-app-popover__input");
-      if (input) {
-        input.value = preferred && !KNOWN_DOMAINS.has(preferred) ? preferred : "";
-      }
-
-      const rect = btn.getBoundingClientRect();
-      const gap = 4;
-      const height = popover.offsetHeight;
-      const popoverWidth = popover.offsetWidth || 160;
-      let top = rect.bottom + gap;
-      if (rect.bottom + gap + height > window.innerHeight && rect.top - gap - height >= 0) {
-        top = rect.top - gap - height;
-      }
-      popover.style.margin = "0";
-      popover.style.top = `${top}px`;
-      const left = Math.min(rect.left, window.innerWidth - popoverWidth - gap);
-      popover.style.left = `${Math.max(gap, left)}px`;
-
-      onScroll = close;
-      onResize = close;
-      window.addEventListener("scroll", onScroll, { passive: true, once: true });
-      window.addEventListener("resize", onResize, { passive: true, once: true });
-    } else if (te.newState === "closed") {
-      if (onScroll) window.removeEventListener("scroll", onScroll);
-      if (onResize) window.removeEventListener("resize", onResize);
-      onScroll = null;
-      onResize = null;
+  // Shared by both modes; the panel must already be visible so it can be measured.
+  function onOpen() {
+    const preferred = localStorage.getItem(PREF_KEY);
+    for (const a of popover.querySelectorAll<HTMLAnchorElement>(".atproto-app-popover__link")) {
+      let hostname = "";
+      try { hostname = new URL(a.href).hostname; } catch { /* ignore */ }
+      a.classList.toggle("atproto-app-popover__link--active", hostname === preferred);
     }
-  });
+    const input = popover.querySelector<HTMLInputElement>(".atproto-app-popover__input");
+    if (input) {
+      input.value = preferred && !KNOWN_DOMAINS.has(preferred) ? preferred : "";
+    }
+
+    const rect = btn.getBoundingClientRect();
+    const gap = 4;
+    const height = popover.offsetHeight;
+    const popoverWidth = popover.offsetWidth || 160;
+    let top = rect.bottom + gap;
+    if (rect.bottom + gap + height > window.innerHeight && rect.top - gap - height >= 0) {
+      top = rect.top - gap - height;
+    }
+    popover.style.margin = "0";
+    popover.style.top = `${top}px`;
+    const left = Math.min(rect.left, window.innerWidth - popoverWidth - gap);
+    popover.style.left = `${Math.max(gap, left)}px`;
+
+    // The virtual keyboard scrolls or resizes the page when the input gets focus;
+    // that must not close the panel while the visitor is typing.
+    onViewportChange = () => {
+      if (!popover.contains(document.activeElement)) close();
+    };
+    window.addEventListener("scroll", onViewportChange, { passive: true });
+    window.addEventListener("resize", onViewportChange, { passive: true });
+    btn.setAttribute("aria-expanded", "true");
+  }
+
+  function onClose() {
+    if (onViewportChange) {
+      window.removeEventListener("scroll", onViewportChange);
+      window.removeEventListener("resize", onViewportChange);
+    }
+    onViewportChange = null;
+    btn.setAttribute("aria-expanded", "false");
+  }
+
+  if (SUPPORTS_POPOVER) {
+    close = () => (popover as HTMLElement & { hidePopover?: () => void }).hidePopover?.();
+    popover.addEventListener("toggle", (e) => {
+      const te = e as ToggleEvent;
+      if (te.newState === "open") onOpen();
+      else if (te.newState === "closed") onClose();
+    });
+  } else {
+    // A panel removed from the DOM while open closes on the next event it receives,
+    // so no document listener outlives it.
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (!popover.isConnected || (!popover.contains(target) && !btn.contains(target))) close();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!popover.isConnected) {
+        close();
+      } else if (e.key === "Escape") {
+        close();
+        btn.focus();
+      }
+    };
+
+    const open = () => {
+      openFallback?.();
+      popover.hidden = false;
+      onOpen();
+      document.addEventListener("pointerdown", onPointerDown, true);
+      document.addEventListener("keydown", onKeyDown, true);
+      openFallback = close;
+    };
+
+    close = () => {
+      if (popover.hidden) return;
+      popover.hidden = true;
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+      onClose();
+      if (openFallback === close) openFallback = null;
+    };
+
+    btn.addEventListener("click", () => (popover.hidden ? open() : close()));
+  }
 
   wrap.appendChild(btn);
   wrap.appendChild(popover);
@@ -447,16 +501,23 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   const header = document.createElement("header");
   header.className = "atproto-reply__header";
 
+  const parts = bylineParts(author);
+  const byline = document.createElement("span");
+  byline.className = "atproto-reply__byline";
+
   const name = document.createElement("b");
   name.className = "atproto-reply__author";
-  name.textContent = author.displayName ?? author.handle ?? "Unknown";
+  name.textContent = parts.name;
+  byline.appendChild(name);
 
-  const handle = document.createElement("span");
-  handle.className = "atproto-reply__handle";
-  handle.textContent = "@" + (author.handle ?? "");
+  if (parts.handle !== null) {
+    const handle = document.createElement("span");
+    handle.className = "atproto-reply__handle";
+    handle.textContent = parts.handle;
+    byline.append(parts.separator, handle);
+  }
 
-  header.appendChild(name);
-  header.appendChild(handle);
+  header.appendChild(byline);
 
   if (isValidDate(record.createdAt)) {
     const time = document.createElement("time");

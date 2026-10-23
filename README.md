@@ -31,7 +31,7 @@ import 'jsr:@arinspunk/atproto-comments';
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
 
 ```html
-<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.1.1/src/atproto-comments.css">
+<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.1.2/src/atproto-comments.css">
 ```
 
 Or, in a static site generator, download it at build time. For example, in Lume:
@@ -39,7 +39,7 @@ Or, in a static site generator, download it at build time. For example, in Lume:
 ```ts
 site.remoteFile(
   "vendor/atproto-comments.css",
-  "https://jsr.io/@arinspunk/atproto-comments/1.1.1/src/atproto-comments.css",
+  "https://jsr.io/@arinspunk/atproto-comments/1.1.2/src/atproto-comments.css",
 );
 site.copy("vendor/atproto-comments.css");
 ```
@@ -162,6 +162,12 @@ atproto-comments {
 ```
 
 All `.atproto-*` classes are also available for full CSS overrides if needed.
+
+## Browser support
+
+The app picker (Comment / Reply) uses the native [Popover API](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API) where available. Browsers without it, such as every browser on iOS 16 and older, get the same picker shown and hidden by the component.
+
+That fallback panel is `position: fixed` with a high `z-index` and carries the extra class `.atproto-app-popover--fallback`. If you style `.atproto-app-popover:popover-open`, style that class too. Unlike the native popover, the fallback panel can be misplaced or covered if an ancestor of the component creates a containing block (`transform`, `filter`) or a stacking context (`z-index`, `opacity`, `isolation`).
 
 ## Framework usage
 
