@@ -7,9 +7,11 @@ Web Component for displaying AT Protocol comments on any website. Drop it in, po
 ### CDN (no build step)
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/atproto-comments/dist/atproto-comments.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/atproto-comments/dist/index.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/atproto-comments@1/dist/atproto-comments.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/atproto-comments@1/dist/index.js"></script>
 ```
+
+`@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.1.2`) to update only when you choose.
 
 ### npm
 
@@ -25,7 +27,7 @@ import 'atproto-comments/style.css';
 ### JSR (Deno)
 
 ```ts
-import 'jsr:@arinspunk/atproto-comments';
+import 'jsr:@arinspunk/atproto-comments@1.1.2';
 ```
 
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
@@ -43,6 +45,10 @@ site.remoteFile(
 );
 site.copy("vendor/atproto-comments.css");
 ```
+
+### Keep script and stylesheet in sync
+
+Always load the script and the stylesheet from the same version, including self-hosted copies: a release can add classes that only its own stylesheet styles. Updating one without the other may leave parts of the UI unstyled.
 
 ## How it works
 
