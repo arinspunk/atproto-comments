@@ -1,0 +1,13 @@
+{
+  "name": "atproto-comments-browser-tests",
+  "private": true,
+  "type": "module",
+  "description": "Browser tests for atproto-comments. Run from the repo root with `npm run test:browser`.",
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "5.1.0",
+    "atproto-comments": "file:../..",
+    "playwright-core": "1.56.1",
+    "svelte": "5.38.0",
+    "vite": "6.3.5"
+  }
+}

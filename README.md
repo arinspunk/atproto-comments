@@ -75,6 +75,12 @@ async function toAtUri(postUrl) {
 
 See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.2.0`) to update only when you choose.
 
+Without `type="module"`, load `dist/index.umd.js` instead. It registers the element the same way:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/atproto-comments@1/dist/index.umd.js"></script>
+```
+
 ### npm
 
 ```bash
@@ -85,6 +91,8 @@ npm install atproto-comments
 import 'atproto-comments';
 import 'atproto-comments/style.css';
 ```
+
+The package includes TypeScript types for `AtprotoComments`, `StringKey` and `UiStrings`.
 
 ### JSR (Deno)
 
@@ -111,6 +119,8 @@ site.copy("vendor/atproto-comments.css");
 ### Keep script and stylesheet in sync
 
 Always load the script and the stylesheet from the same version, including self-hosted copies. A release can add classes that only its own stylesheet styles, so updating one without the other may leave parts of the UI unstyled.
+
+If you self-host the module, copy `dist/element.js` next to `dist/index.js`: `index.js` imports it. `dist/index.umd.js` is self-contained.
 
 ## Attributes
 
@@ -313,6 +323,8 @@ Mention these third-party requests in your privacy policy if it lists embedded s
 
 ## Framework usage
 
+Importing the package on the server (server-side rendering) is safe: outside the browser it registers nothing. The element itself renders in the browser.
+
 ### Astro
 
 ```astro
@@ -333,7 +345,7 @@ const threadUri = `at://${did}/app.bsky.feed.post/${rkey}`;
 
 ### Next.js (App Router)
 
-The component needs the DOM, so wrap it in a client component:
+The element renders in the browser, so load it from a client component:
 
 ```tsx
 // components/AtprotoComments.tsx
@@ -380,7 +392,16 @@ declare module 'react' {
 
 ## Custom element name
 
-Importing the package registers `<atproto-comments>`. To use another tag name as well, register a subclass (the same class can't be registered twice):
+Importing the package registers `<atproto-comments>`. To use another tag name instead, import the class from `atproto-comments/element`, which registers nothing:
+
+```js
+import { AtprotoComments } from 'atproto-comments/element';
+customElements.define('my-comments', AtprotoComments);
+```
+
+With JSR, the same entry point is `jsr:@arinspunk/atproto-comments/element`.
+
+To use both tag names, import the package and register a subclass (the same class can't be registered twice):
 
 ```js
 import { AtprotoComments } from 'atproto-comments';
@@ -395,12 +416,16 @@ customElements.define('my-comments', class extends AtprotoComments {});
 
 ```bash
 npm ci
-npm run check      # type check
-npm run build      # dist/index.js, dist/index.umd.js, dist/atproto-comments.css
-deno task test     # unit tests
+npm run check            # type check
+npm run build            # dist/ (index.js, element.js, index.umd.js, types/, CSS); `deno task build` runs the same
+deno task test           # unit tests, without a DOM
+npm run check:versions   # package.json, package-lock.json, deno.json and the README pins agree
+npm run test:browser     # builds, then runs tests/browser in Chromium and WebKit
 ```
 
-Changes follow [OpenSpec](https://github.com/Fission-AI/OpenSpec). The current specs are in `openspec/specs/`, and proposed and archived changes are in `openspec/changes/`. Pushing a `v*` tag publishes the release to JSR and creates a GitHub release. Every release adds its entry to [CHANGELOG.md](CHANGELOG.md).
+The browser tests use Playwright. Install its browsers once with `npx --prefix tests/browser playwright-core install chromium webkit`. Run them before releasing a version that changes the component. For browsers they don't cover (Firefox, Safari on a device), `npm run build && node tests/browser/server.mjs` serves pages that report PASS or FAIL.
+
+Changes follow [OpenSpec](https://github.com/Fission-AI/OpenSpec). The current specs are in `openspec/specs/`, and proposed and archived changes are in `openspec/changes/`. Pushing a `v*` tag checks that the tag matches every version above, then publishes the release to JSR and creates a GitHub release. Every release adds its entry to [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

@@ -23,6 +23,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Check versions
+        run: node scripts/check-versions.js
+
       - name: Typecheck
         run: npx tsc --noEmit
 
@@ -31,3 +34,6 @@ jobs:
 
       - name: Build
         run: node scripts/build.js
+
+      - name: Import without a DOM
+        run: node --input-type=module -e "await import('./dist/index.js'); await import('./dist/element.js')"

@@ -5,14 +5,23 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.js",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "check:versions": "node scripts/check-versions.js",
+    "test:browser": "npm run build && npm ci --prefix tests/browser && node tests/browser/run.mjs"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.umd.js"
+      "default": "./dist/index.js"
+    },
+    "./element": {
+      "types": "./dist/types/element.d.ts",
+      "import": "./dist/element.js",
+      "default": "./dist/element.js"
     },
     "./style.css": "./dist/atproto-comments.css"
   },

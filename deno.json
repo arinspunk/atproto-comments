@@ -2,7 +2,10 @@
   "name": "@arinspunk/atproto-comments",
   "version": "1.2.0",
   "license": "MIT",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./element": "./src/element.ts"
+  },
   "publish": {
     "include": [
       "src/**/*.ts",
@@ -16,7 +19,7 @@
     ]
   },
   "tasks": {
-    "build": "deno run --allow-read --allow-write --allow-env --allow-run scripts/build.ts",
+    "build": "node scripts/build.js",
     "check": "deno run --allow-read --allow-env npm:typescript/bin/tsc --noEmit",
     "test": "deno test --allow-env src/"
   },

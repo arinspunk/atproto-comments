@@ -26,6 +26,11 @@ jobs:
 
       - run: npm ci
 
+      - name: Check versions
+        env:
+          TAG: ${{ github.ref_name }}
+        run: node scripts/check-versions.js --tag "$TAG"
+
       - name: Test
         run: deno task test
 

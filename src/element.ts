@@ -1,12 +1,13 @@
 /**
  * @module
- * Web Component for displaying AT Protocol comments on any website.
+ * The `AtprotoComments` class without registering any tag. Use it to register
+ * the element under another name; import the package root to get
+ * `<atproto-comments>` registered for you.
  *
  * @example
- * ```html
- * <atproto-comments
- *   thread-uri="at://did:plc:xxxx/app.bsky.feed.post/yyyy"
- * ></atproto-comments>
+ * ```js
+ * import { AtprotoComments } from "atproto-comments/element";
+ * customElements.define("my-comments", AtprotoComments);
  * ```
  */
 
@@ -47,7 +48,12 @@ const KNOWN_DOMAINS = new Set(KNOWN_APPS.map((a) => a.domain));
 const DEFAULT_APPVIEW = "https://public.api.bsky.app";
 const DEFAULT_MAX_DEPTH = 6;
 
-const SUPPORTS_POPOVER = "popover" in HTMLElement.prototype;
+let popoverSupport: boolean | undefined;
+
+/** Whether the browser has the Popover API. Checked lazily so the module loads without the DOM. */
+function supportsPopover(): boolean {
+  return (popoverSupport ??= "popover" in HTMLElement.prototype);
+}
 
 // --- Pure utilities ---
 
@@ -139,7 +145,7 @@ function buildAppPopover(
   const popover = document.createElement("div");
   popover.id = popoverId;
   popover.className = "atproto-app-popover";
-  if (SUPPORTS_POPOVER) {
+  if (supportsPopover()) {
     popover.setAttribute("popover", "");
   } else {
     // Without the Popover API the attribute is unknown and would not hide the panel.
@@ -224,7 +230,7 @@ function buildAppPopover(
 function buildAppButton(label: string, popoverId: string, extraClass?: string, ariaLabel?: string): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.setAttribute(SUPPORTS_POPOVER ? "popovertarget" : "aria-controls", popoverId);
+  btn.setAttribute(supportsPopover() ? "popovertarget" : "aria-controls", popoverId);
   btn.setAttribute("aria-haspopup", "true");
   btn.setAttribute("aria-expanded", "false");
   btn.className = "atproto-app-btn" + (extraClass ? ` ${extraClass}` : "");
@@ -298,7 +304,7 @@ function buildAppAction(
     btn.setAttribute("aria-expanded", "false");
   }
 
-  if (SUPPORTS_POPOVER) {
+  if (supportsPopover()) {
     close = () => (popover as HTMLElement & { hidePopover?: () => void }).hidePopover?.();
     popover.addEventListener("toggle", (e) => {
       const te = e as ToggleEvent;
@@ -483,6 +489,11 @@ function renderThread(result: ThreadResult, loc: Loc): HTMLElement[] {
 }
 // --- Web Component ---
 
+// Without the DOM (server-side rendering) the class still loads, with an empty base.
+const Base: typeof HTMLElement = typeof HTMLElement === "undefined"
+  ? (class {} as unknown as typeof HTMLElement)
+  : HTMLElement;
+
 /**
  * Web Component that displays AT Protocol comments for a given post thread.
  *
@@ -518,7 +529,7 @@ function renderThread(result: ThreadResult, loc: Loc): HTMLElement[] {
  * ></atproto-comments>
  * ```
  */
-export class AtprotoComments extends HTMLElement {
+export class AtprotoComments extends Base {
   static observedAttributes = ["thread-uri", "appview", "lang", "max-depth", "strings"];
 
   #strings: UiStrings | undefined;
@@ -666,9 +677,4 @@ export class AtprotoComments extends HTMLElement {
     this.#nodes = renderThread(this.#data, this.#loc());
     this.append(...this.#nodes);
   }
-}
-
-// Auto-register with guard for double import
-if (!customElements.get("atproto-comments")) {
-  customElements.define("atproto-comments", AtprotoComments);
 }
