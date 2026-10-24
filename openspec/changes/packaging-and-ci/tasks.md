@@ -32,6 +32,7 @@
   - un README sin ningún pin lo hace fallar
 - [x] 3.2 Siguiendo la skill `ci-workflows` (recordar al usuario que la copia esquiva la regla de la organización y pedirle `! cp -R .github github-copy`), añadir en `ci.yml` la comprobación de versiones tras `npm ci` y la importación en Node de `dist/index.js` y `dist/element.js` tras el build, y en `release.yml` la comprobación con `--tag` antes de los tests. Validar el YAML con el comando de la skill y pedir al usuario que devuelva los archivos y borre la copia. Verificar con `git status --short` que solo cambian los dos workflows y que `github-copy/` no existe
 - [x] 3.3 Verificar en GitHub que el CI de la rama pasa, y que un commit temporal con un pin del README descuadrado lo hace fallar en el paso de versiones. Revertir el commit temporal
+- [x] 3.4 Incluir en `scripts/check-versions.js` la versión del paquete enlazado en `tests/browser/package-lock.json` (`packages["../.."].version`), con la indicación de cómo actualizarlo si falla. Verificar que `npm run check:versions` pasa con 1.3.0 y que falla con ese lockfile en 1.2.0
 
 ## 4. Batería de navegador (tests/browser)
 

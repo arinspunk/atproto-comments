@@ -123,7 +123,7 @@ Se elimina `scripts/build.ts`. `deno task build` pasa a `node scripts/build.js`,
 
 `scripts/check-versions.js` (Node, sin dependencias):
 
-- Lee la versión de `package.json`, `package-lock.json` (`version` y `packages[""].version`) y `deno.json`, y los pins de `README.md`. Falla con un mensaje que lista cada archivo y su valor si alguna no coincide con la de `package.json`.
+- Lee la versión de `package.json`, `package-lock.json` (`version` y `packages[""].version`), `deno.json` y `tests/browser/package-lock.json` (`packages["../.."].version`, la versión del paquete enlazado con `file:../..`, que npm guarda y no actualiza solo), y los pins de `README.md`. Si falla por el lockfile de los tests, el mensaje indica cómo actualizarlo. Falla con un mensaje que lista cada archivo y su valor si alguna no coincide con la de `package.json`.
 - En el README solo cuenta como pin una versión pegada al nombre del paquete o al ejemplo de la sección CDN:
   - `atproto-comments@X.Y.Z` (import de JSR y URLs de CDN con versión exacta);
   - `atproto-comments/X.Y.Z/` (URLs de `jsr.io` del CSS);

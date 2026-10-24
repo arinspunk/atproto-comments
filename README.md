@@ -421,7 +421,7 @@ npm ci
 npm run check            # type check
 npm run build            # dist/ (index.js, element.js, index.umd.js, types/, CSS); `deno task build` runs the same
 deno task test           # unit tests, without a DOM
-npm run check:versions   # package.json, package-lock.json, deno.json and the README pins agree
+npm run check:versions   # package.json, the lockfiles, deno.json and the README pins agree
 npm run test:browser     # builds, then runs tests/browser in Chromium and WebKit
 ```
 
