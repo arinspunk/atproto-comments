@@ -54,16 +54,26 @@ Si el elemento se reconecta, su carga anterior había terminado y no ha cambiado
 - **AND** el hilo aparece una sola vez, igual que antes de moverlo
 
 ### Requirement: Cambiar el hilo vuelve a cargar
-Cambiar `thread-uri`, `appview` o `max-depth` en un elemento conectado SHALL provocar una petición nueva y sustituir el contenido por el del hilo nuevo. El contenido del hilo anterior SHALL quitarse en cuanto empieza la petición nueva. Empezar una petición nueva, o pasar a un `thread-uri` ausente o inválido, SHALL cancelar la petición en curso. Solo SHALL mostrarse la respuesta de la última petición; cualquier respuesta de una petición anterior que llegue después SHALL descartarse, aunque corresponda al mismo valor.
+Cambiar `thread-uri`, `appview` o `max-depth` en un elemento conectado SHALL provocar una petición nueva y sustituir el contenido por el del hilo nuevo.
 
 #### Scenario: Otro hilo en el mismo elemento
 - **WHEN** en un elemento conectado se cambia `thread-uri` por el de otro post
 - **THEN** se hace una petición para el post nuevo
 - **AND** el elemento muestra solo las respuestas del post nuevo
 
+#### Scenario: Valor inválido después de uno válido
+- **WHEN** en un elemento que muestra un hilo se cambia `thread-uri` por un valor que no empieza por `at://`
+- **THEN** el elemento muestra solo el mensaje de error, sin el hilo anterior
+
+### Requirement: El hilo anterior se quita al empezar la carga
+Cuando empieza una petición para un hilo distinto del que se muestra, el contenido del hilo anterior SHALL quitarse en ese momento, sin esperar a la respuesta.
+
 #### Scenario: Contenido durante la carga del hilo nuevo
 - **WHEN** en un elemento que muestra un hilo se cambia `thread-uri` y la respuesta del post nuevo todavía no ha llegado
 - **THEN** el elemento no muestra el hilo anterior ni su botón principal
+
+### Requirement: Solo se muestra la última petición
+Empezar una petición nueva, o pasar a un `thread-uri` ausente o inválido, SHALL cancelar la petición en curso. Solo SHALL mostrarse la respuesta de la última petición; cualquier respuesta de una petición anterior que llegue después SHALL descartarse, aunque corresponda al mismo valor.
 
 #### Scenario: Respuesta tardía del hilo anterior
 - **WHEN** se cambia `thread-uri` mientras la petición del valor anterior sigue en curso, y esa respuesta llega después que la del valor nuevo
@@ -73,10 +83,6 @@ Cambiar `thread-uri`, `appview` o `max-depth` en un elemento conectado SHALL pro
 - **WHEN** `thread-uri` pasa de A a B y de nuevo a A mientras las peticiones siguen en curso, y la primera respuesta de A llega la última
 - **THEN** se cancelan la primera petición de A y la de B
 - **AND** el elemento muestra el hilo A una sola vez, con los datos de la última petición
-
-#### Scenario: Valor inválido después de uno válido
-- **WHEN** en un elemento que muestra un hilo se cambia `thread-uri` por un valor que no empieza por `at://`
-- **THEN** el elemento muestra solo el mensaje de error, sin el hilo anterior
 
 #### Scenario: Valor inválido durante la carga
 - **WHEN** se cambia `thread-uri` por un valor que no empieza por `at://` mientras la petición del valor anterior sigue en curso

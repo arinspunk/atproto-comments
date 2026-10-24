@@ -43,7 +43,7 @@ Motivación en `proposal.md`; comportamiento esperado en los deltas de `element-
 
 ### 2. Decisión pura en `src/lifecycle.ts`
 
-El módulo no toca el DOM y exporta dos piezas:
+El módulo no toca el DOM. Exporta el planificador y la decisión, y además `dataKey(threadUri, appview, maxDepth)`, que construye la clave de datos, e `isInvalidKey(key)`, que reconoce la de un `thread-uri` ausente o inválido:
 
 ```ts
 /** Agrupa llamadas en una microtarea y no ejecuta `run` si `isConnected()` es falso. */
@@ -82,7 +82,7 @@ type ThreadResult =
   - si la clave es de tipo `invalid`, guarda `{ kind: "invalid" }` y `loadedKey`, y llama a `#render()`;
   - si no, llama a `#fetch(key, threadUri)`.
 - `#fetch(key, threadUri)` crea un `AbortController` nuevo, lo guarda en `#controller` (en una constante local `controller`), guarda `inFlightKey` y hace la petición con su `signal`.
-- La respuesta se acepta por identidad de la petición, no por clave: solo si `controller === this.#controller`. Comparar claves falla cuando el valor vuelve atrás (A → B → A): una respuesta tardía de la primera petición A coincidiría con la clave de la segunda. Si se acepta y el elemento está conectado, guarda `#data` y `loadedKey`, pone `#controller = null` e `inFlightKey = null` y llama a `#render()`. Si no, descarta el resultado.
+- La respuesta se acepta por identidad de la petición, no por clave: solo si `controller === this.#controller`. Comparar claves falla cuando el valor vuelve atrás (A → B → A): una respuesta tardía de la primera petición A coincidiría con la clave de la segunda. Si se acepta, guarda `#data` y `loadedKey`, pone `#controller = null` e `inFlightKey = null` y llama a `#render()`. Si no, descarta el resultado. No hace falta comprobar `isConnected`: desconectar llama a `#abort()` (decisión 4), así que la respuesta de un elemento desconectado ya no es la de la petición actual.
 - Después de cada `await` (el de `fetch` y el de `res.json()`), si `controller.signal.aborted` o `controller !== this.#controller`, se sale sin guardar nada. Así se descartan también un abort que llega durante `res.json()` y un error de red posterior a un abort, sin depender del nombre del error.
 - `#render()` es síncrono. Calcula `#loc()` en ese momento y construye los nodos a partir de `#data`. La lógica actual de `#load` (hilo vacío, `notFoundPost`, `blockedPost`, lista y botón) pasa aquí sin cambios visibles. Al terminar pone `viewDirty = false`.
 - Un error de red o un `!res.ok` se guarda como `{ kind: "error" }` con su clave. Esto cumple «reconectar sin cambios reutiliza el contenido»: el error se queda y no se reintenta solo. Cambiar `lang` vuelve a renderizar el error en el idioma nuevo.
