@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/): new attributes, properties, `strings` keys, CSS custom properties or classes are minor releases.
 
+## [1.4.0] - 2026-10-24
+
+### Added
+
+- `go` string: the accessible name of the `→` button in the app picker (`Open`, `Abrir`). The arrow is now hidden from screen readers.
+- `unknownAuthor` string: the name shown for an author with no display name or handle (`Unknown`, `Desconhecido`). It was always "Unknown" in English.
+- Loading state: while the replies load, the element has `aria-busy="true"` and the class `atproto-comments--loading`. There is no loading text by default.
+
+### Changed
+
+- Mentions and the link to more replies open in the app the visitor chose in the app picker, or on bsky.app if they haven't chosen one. Hashtags do too when the chosen app is Bluesky, Mu or Deer; with a custom domain they still open on bsky.app. Links use the app chosen when they are opened, even if that changed after the replies rendered.
+- The default `viewMore` text is now `View more replies` (`Ver mais respostas`), since the link no longer always goes to Bluesky. Set `viewMore` in `strings` to keep the old text.
+- Replies more than a year old show the short date in the page's language (`1/2/20` in `en-US`, `02/01/20` in `pt-PT`) instead of a fixed `dd/mm/yyyy`.
+- The button that opens the app picker no longer has `aria-haspopup`: the picker is not a menu.
+
+### Fixed
+
+- Replies written by an account labeled `!hide`, `porn` or another hiding label are now hidden, with their replies. Labels on the author's profile record (avatar, banner) don't hide anything.
+- When every reply is hidden, only the **Comment** button is shown, without an empty list. Nested replies get the same treatment.
+
 ## [1.3.0] - 2026-10-24
 
 ### Added

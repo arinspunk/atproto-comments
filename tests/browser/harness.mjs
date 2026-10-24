@@ -10,6 +10,7 @@
 // - files: { "/path": absolutePath } overriding what is served.
 // - dirs: { "/prefix/": absoluteDir } serving a directory under a prefix.
 // - url: page to open instead of the scenario body.
+// - timezoneId: time zone of the page (e.g. "Europe/Lisbon").
 
 import { resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -19,11 +20,16 @@ export const ROOT = resolve(fileURLToPath(import.meta.url), "../../..");
 export const DIST = resolve(ROOT, "dist");
 export const ORIGIN = "http://t.local";
 
-/** Mock AppView. Delay per post rkey in window.__delay; requests in __calls ("n:rkey"), aborts in __aborted. */
+/**
+ * Mock AppView. Delay per post rkey in window.__delay; requests in __calls ("n:rkey"),
+ * aborts in __aborted. window.__thread[rkey] replaces the default thread of that
+ * post (a thread object), or answers with that HTTP status (a number).
+ */
 export const MOCK = () => {
   window.__calls = [];
   window.__aborted = [];
   window.__delay = {};
+  window.__thread ??= {};
   const mk = (uri) => ({
     thread: {
       $type: "app.bsky.feed.defs#threadViewPost",
@@ -42,12 +48,18 @@ export const MOCK = () => {
   window.fetch = (url, opts = {}) => {
     const u = new URL(url);
     const uri = u.searchParams.get("uri");
-    const id = ++n + ":" + uri.split("/").pop();
+    const rkey = uri.split("/").pop();
+    const id = ++n + ":" + rkey;
     __calls.push(id);
     (window.__urls ??= []).push(String(url));
-    const d = __delay[uri.split("/").pop()] ?? 50;
+    const d = __delay[rkey] ?? 50;
+    const custom = __thread[rkey];
+    const response = () =>
+      typeof custom === "number"
+        ? new Response("{}", { status: custom })
+        : new Response(JSON.stringify(custom ? { thread: custom } : mk(uri)), { status: 200 });
     return new Promise((res, rej) => {
-      const t = setTimeout(() => res(new Response(JSON.stringify(mk(uri)), { status: 200 })), d);
+      const t = setTimeout(() => res(response()), d);
       opts.signal?.addEventListener("abort", () => {
         clearTimeout(t);
         __aborted.push(id);
@@ -68,6 +80,34 @@ export const MOCK = () => {
 };
 
 export const U = (x) => `at://did:plc:root/app.bsky.feed.post/${x}`;
+
+/** A reply for window.__thread: `fields` are merged into its post (author, labels, record…). */
+export function replyView(rkey, fields = {}, replies = []) {
+  const author = { did: `did:plc:${rkey}`, handle: `${rkey}.example`, ...fields.author };
+  return {
+    $type: "app.bsky.feed.defs#threadViewPost",
+    post: {
+      uri: `at://${author.did}/app.bsky.feed.post/${rkey}`,
+      record: { text: `reply-of-${rkey}`, createdAt: "2026-10-20T10:00:00Z", ...fields.record },
+      ...fields,
+      author,
+    },
+    replies,
+  };
+}
+
+/** A thread for window.__thread with these replies and, optionally, threadgate-hidden URIs. */
+export function threadView(rkey, replies, hiddenReplies) {
+  return {
+    $type: "app.bsky.feed.defs#threadViewPost",
+    post: { uri: U(rkey) },
+    replies,
+    ...(hiddenReplies ? { threadgate: { record: { hiddenReplies } } } : {}),
+  };
+}
+
+/** Init script that sets window.__thread[rkey] to `thread`. */
+export const withThread = (rkey, thread) => `(window.__thread ??= {})[${JSON.stringify(rkey)}] = ${JSON.stringify(thread)};`;
 export const MOD = `<script type="module" src="index.js"></script>`;
 
 const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml" };
@@ -75,7 +115,7 @@ const typeOf = (f) => TYPES[f.slice(f.lastIndexOf("."))] ?? "application/octet-s
 
 /** Opens a page for `scenario`, returns { page, errors }. */
 export async function openPage(browser, scenario) {
-  const page = await browser.newPage();
+  const page = await browser.newPage(scenario.timezoneId ? { timezoneId: scenario.timezoneId } : {});
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route(`${ORIGIN}/**`, (r) => {

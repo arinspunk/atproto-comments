@@ -5,7 +5,8 @@
 //
 // Then open http://localhost:8765/ (or the machine's LAN address from a phone).
 // Posts: "<name>" returns two replies tagged with the name, "<name>~<ms>" delays the
-// response, "e500" answers HTTP 500.
+// response, "e500" answers HTTP 500, and "links" returns a reply with a mention, a
+// hashtag and a "View more replies" link.
 
 import http from "node:http";
 import { existsSync, readFileSync } from "node:fs";
@@ -25,6 +26,31 @@ const reply = (name, i) => ({
   },
 });
 
+// "Mention @bsky.app and #atproto": byte offsets of the facets, all ASCII.
+const LINKS_TEXT = "Mention @bsky.app and #atproto";
+const linksThread = (uri) => ({
+  $type: "app.bsky.feed.defs#threadViewPost",
+  post: { uri },
+  replies: [{
+    ...reply("links", 1),
+    post: {
+      ...reply("links", 1).post,
+      replyCount: 5,
+      record: {
+        text: LINKS_TEXT,
+        createdAt: "2020-01-01T10:00:00.000Z",
+        facets: [
+          {
+            index: { byteStart: 8, byteEnd: 17 },
+            features: [{ $type: "app.bsky.richtext.facet#mention", did: "did:plc:z72i7hdynmk6r22z27h6tvur" }],
+          },
+          { index: { byteStart: 22, byteEnd: 30 }, features: [{ $type: "app.bsky.richtext.facet#tag", tag: "atproto" }] },
+        ],
+      },
+    },
+  }],
+});
+
 http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (url.pathname.endsWith("/xrpc/app.bsky.feed.getPostThread")) {
@@ -36,6 +62,7 @@ http.createServer((req, res) => {
         return res.end("{}");
       }
       res.setHeader("content-type", "application/json");
+      if (name === "links") return res.end(JSON.stringify({ thread: linksThread(url.searchParams.get("uri")) }));
       res.end(JSON.stringify({
         thread: {
           $type: "app.bsky.feed.defs#threadViewPost",

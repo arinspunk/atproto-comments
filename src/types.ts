@@ -6,6 +6,8 @@
 
 export interface Label {
   val: string;
+  /** What the label applies to: an account (DID) or a record (AT-URI). */
+  uri?: string;
 }
 
 export interface Facet {
@@ -23,6 +25,8 @@ export interface ProfileViewBasic {
   handle?: string;
   displayName?: string;
   avatar?: string;
+  /** Labels on the account (uri = did) and on the profile record. */
+  labels?: Label[];
 }
 
 export interface PostRecord {

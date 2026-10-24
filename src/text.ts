@@ -6,10 +6,16 @@
 
 import type { PostRecord } from "./types.ts";
 
-/** A run of post text, linked when `href` is set. */
+/**
+ * A run of post text: a link when `href` is set, a mention of `mention` (a DID)
+ * or a hashtag `tag` when those are set, plain text otherwise. Mentions and
+ * hashtags carry no URL because they open in the visitor's preferred app.
+ */
 export interface TextSegment {
   text: string;
   href?: string;
+  mention?: string;
+  tag?: string;
 }
 
 /**
@@ -21,7 +27,7 @@ export function facetSegments(record: PostRecord): TextSegment[] {
   const facets = record.facets ?? [];
   const bytes = new TextEncoder().encode(text);
 
-  const links: Array<{ start: number; end: number; uri: string }> = [];
+  const links: Array<{ start: number; end: number; uri?: string; mention?: string; tag?: string }> = [];
   for (const facet of facets) {
     for (const feature of facet.features ?? []) {
       if (feature.$type === "app.bsky.richtext.facet#link" && "uri" in feature) {
@@ -30,17 +36,9 @@ export function facetSegments(record: PostRecord): TextSegment[] {
           links.push({ start: facet.index.byteStart, end: facet.index.byteEnd, uri });
         }
       } else if (feature.$type === "app.bsky.richtext.facet#mention" && "did" in feature) {
-        links.push({
-          start: facet.index.byteStart,
-          end: facet.index.byteEnd,
-          uri: `https://bsky.app/profile/${feature.did}`,
-        });
+        links.push({ start: facet.index.byteStart, end: facet.index.byteEnd, mention: feature.did });
       } else if (feature.$type === "app.bsky.richtext.facet#tag" && "tag" in feature) {
-        links.push({
-          start: facet.index.byteStart,
-          end: facet.index.byteEnd,
-          uri: `https://bsky.app/hashtag/${encodeURIComponent(feature.tag)}`,
-        });
+        links.push({ start: facet.index.byteStart, end: facet.index.byteEnd, tag: feature.tag });
       }
     }
   }
@@ -55,7 +53,10 @@ export function facetSegments(record: PostRecord): TextSegment[] {
     if (link.start > pos) {
       segments.push({ text: decoder.decode(bytes.slice(pos, link.start)) });
     }
-    segments.push({ text: decoder.decode(bytes.slice(link.start, link.end)), href: link.uri });
+    const run = decoder.decode(bytes.slice(link.start, link.end));
+    if (link.mention !== undefined) segments.push({ text: run, mention: link.mention });
+    else if (link.tag !== undefined) segments.push({ text: run, tag: link.tag });
+    else segments.push({ text: run, href: link.uri });
     pos = link.end;
   }
   if (pos < bytes.length) {

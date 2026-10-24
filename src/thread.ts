@@ -4,7 +4,7 @@
  * browser.
  */
 
-import type { Label, ThreadViewPost } from "./types.ts";
+import type { Label, PostView, ThreadViewPost } from "./types.ts";
 
 const HIDE_LABELS = new Set([
   "!hide",
@@ -19,6 +19,19 @@ const HIDE_LABELS = new Set([
 export function isHiddenByLabel(labels: Label[] | undefined): boolean {
   if (!Array.isArray(labels)) return false;
   return labels.some((l) => HIDE_LABELS.has(l.val));
+}
+
+/**
+ * Whether a reply is hidden: by the thread author (threadgate), by a label on
+ * the post, or by a label on the author's account. Labels on the author's
+ * profile record (avatar, banner) don't hide what they post.
+ */
+export function isReplyHidden(post: PostView | undefined, hidden: Set<string>): boolean {
+  if (hidden.has(post?.uri ?? "")) return true;
+  if (isHiddenByLabel(post?.labels)) return true;
+  const did = post?.author?.did;
+  if (!did || !Array.isArray(post?.author?.labels)) return false;
+  return isHiddenByLabel(post.author.labels.filter((l) => l.uri === did));
 }
 
 /** URIs of the replies hidden by the thread author in the threadgate. */
