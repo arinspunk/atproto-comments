@@ -394,7 +394,7 @@ npm run build      # dist/index.js, dist/index.umd.js, dist/atproto-comments.css
 deno task test     # unit tests
 ```
 
-Changes follow [OpenSpec](https://github.com/Fission-AI/OpenSpec). The current specs are in `openspec/specs/`, and proposed and archived changes are in `openspec/changes/`. Pushing a `v*` tag publishes the release to JSR and creates a GitHub release.
+Changes follow [OpenSpec](https://github.com/Fission-AI/OpenSpec). The current specs are in `openspec/specs/`, and proposed and archived changes are in `openspec/changes/`. Pushing a `v*` tag publishes the release to JSR and creates a GitHub release. Every release adds its entry to [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

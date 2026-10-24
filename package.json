@@ -17,7 +17,8 @@
     "./style.css": "./dist/atproto-comments.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "keywords": [
     "atproto",
