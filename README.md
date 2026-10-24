@@ -97,7 +97,7 @@ The package includes TypeScript types for `AtprotoComments`, `StringKey` and `Ui
 ### JSR (Deno)
 
 ```ts
-import 'jsr:@arinspunk/atproto-comments@1.2.9';
+import 'jsr:@arinspunk/atproto-comments@1.2.0';
 ```
 
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
