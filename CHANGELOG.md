@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/): new attributes, properties, `strings` keys, CSS custom properties or classes are minor releases.
 
-## [1.1.3] - Unreleased
+## [1.1.3] - 2026-10-24
 
 ### Fixed
 
@@ -86,7 +86,7 @@ Initial release.
 - Theming with `--atproto-*` custom properties and `.atproto-*` classes.
 - Published on npm (ES module and a self-registering script), JSR and jsDelivr.
 
-[1.1.3]: https://github.com/arinspunk/atproto-comments/compare/v1.1.2...HEAD
+[1.1.3]: https://github.com/arinspunk/atproto-comments/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/arinspunk/atproto-comments/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/arinspunk/atproto-comments/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/arinspunk/atproto-comments/compare/v1.0.5...v1.1.0
