@@ -2,13 +2,14 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/): new attributes, properties, `strings` keys, CSS custom properties or classes are minor releases.
 
-## [Unreleased]
+## [1.3.0] - 2026-10-24
 
 ### Added
 
 - `atproto-comments/element` (JSR: `jsr:@arinspunk/atproto-comments/element`) exports `AtprotoComments` and its types without registering any tag. Use it to register the element under another name only.
 - The npm package includes TypeScript types for both entry points.
 - Importing the package outside the browser (server-side rendering) no longer throws: it registers nothing.
+- The element adds the class `atproto-comments` to itself, and the stylesheet targets it too, so an element registered under another tag name gets the same styles. Before, it rendered unstyled. Overrides written as `atproto-comments { … }` keep the same priority.
 
 ### Changed
 

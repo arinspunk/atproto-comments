@@ -73,7 +73,7 @@ async function toAtUri(postUrl) {
 
 ### CDN
 
-See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.2.0`) to update only when you choose.
+See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.3.0`) to update only when you choose.
 
 Without `type="module"`, load `dist/index.umd.js` instead. It registers the element the same way:
 
@@ -97,13 +97,13 @@ The package includes TypeScript types for `AtprotoComments`, `StringKey` and `Ui
 ### JSR (Deno)
 
 ```ts
-import 'jsr:@arinspunk/atproto-comments@1.2.0';
+import 'jsr:@arinspunk/atproto-comments@1.3.0';
 ```
 
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
 
 ```html
-<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.2.0/src/atproto-comments.css">
+<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.3.0/src/atproto-comments.css">
 ```
 
 Or, in a static site generator, download it at build time. For example, in Lume:
@@ -111,7 +111,7 @@ Or, in a static site generator, download it at build time. For example, in Lume:
 ```ts
 site.remoteFile(
   "vendor/atproto-comments.css",
-  "https://jsr.io/@arinspunk/atproto-comments/1.2.0/src/atproto-comments.css",
+  "https://jsr.io/@arinspunk/atproto-comments/1.3.0/src/atproto-comments.css",
 );
 site.copy("vendor/atproto-comments.css");
 ```
@@ -253,7 +253,7 @@ The default border and surface colors are meant for light backgrounds. The app p
 For full CSS overrides, this is the structure the component generates:
 
 ```html
-<atproto-comments>
+<atproto-comments class="atproto-comments">   <!-- the class is added on connect -->
   <ol class="atproto-comments__list">
     <li>
       <article class="atproto-reply">
@@ -400,6 +400,8 @@ customElements.define('my-comments', AtprotoComments);
 ```
 
 With JSR, the same entry point is `jsr:@arinspunk/atproto-comments/element`.
+
+The element adds the class `atproto-comments` to itself, so the stylesheet applies under any tag name. To theme it, use your tag name, for example `my-comments { --atproto-avatar-bg: teal; }`.
 
 To use both tag names, import the package and register a subclass (the same class can't be registered twice):
 
