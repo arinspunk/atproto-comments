@@ -2,31 +2,31 @@
 
 ## 1. Módulos sin DOM y tests en el CI
 
-- [ ] 1.1 Mover las interfaces del AppView de `src/index.ts` a `src/types.ts` y crear `src/thread.ts` (`isHiddenByLabel`, `sortedReplies`) y `src/text.ts` (`normalizeDomain`) con el código actual, sin cambiar comportamiento. `index.ts` importa de ellos y no reexporta nada nuevo. Verificar que `npx tsc --noEmit` y `deno task check` pasan y que `deno publish --dry-run` no da avisos de *slow types*
-- [ ] 1.2 Añadir `src/thread.test.ts` (`isHiddenByLabel` con y sin etiquetas, `sortedReplies` filtra lo que no es `threadViewPost` y ordena por `createdAt`) y `src/text.test.ts` (`normalizeDomain` con `https://`, barra final, espacios, ruta y dominio sin punto). Verificar que `deno task test` pasa
-- [ ] 1.3 Extraer de `buildFacetedText` la función pura `facetSegments(record)` en `src/text.ts` (design, decisión 5) y dejar `buildFacetedText` como bucle que crea nodos con los mismos atributos. Añadir tests con emojis, acentos, varias facets, rangos solapados, rangos fuera del texto y enlaces que no son `http(s)`. Verificar que `deno task test` pasa y que un hilo real con menciones, enlaces y hashtags se ve igual que en 1.1.2
+- [x] 1.1 Mover las interfaces del AppView de `src/index.ts` a `src/types.ts` y crear `src/thread.ts` (`isHiddenByLabel`, `sortedReplies`) y `src/text.ts` (`normalizeDomain`) con el código actual, sin cambiar comportamiento. `index.ts` importa de ellos y no reexporta nada nuevo. Verificar que `npx tsc --noEmit` y `deno task check` pasan y que `deno publish --dry-run` no da avisos de *slow types*
+- [x] 1.2 Añadir `src/thread.test.ts` (`isHiddenByLabel` con y sin etiquetas, `sortedReplies` filtra lo que no es `threadViewPost` y ordena por `createdAt`) y `src/text.test.ts` (`normalizeDomain` con `https://`, barra final, espacios, ruta y dominio sin punto). Verificar que `deno task test` pasa
+- [x] 1.3 Extraer de `buildFacetedText` la función pura `facetSegments(record)` en `src/text.ts` (design, decisión 5) y dejar `buildFacetedText` como bucle que crea nodos con los mismos atributos. Añadir tests con emojis, acentos, varias facets, rangos solapados, rangos fuera del texto y enlaces que no son `http(s)`. Verificar que `deno task test` pasa y que un hilo real con menciones, enlaces y hashtags se ve igual que en 1.1.2
 - [ ] 1.4 En `.github/workflows/ci.yml` y `.github/workflows/release.yml`, añadir `denoland/setup-deno@v2` y un paso `deno task test`. En `release.yml` debe ir antes de `deno publish`. Verificar que el workflow de CI de la rama ejecuta los tests y pasa, y que un test roto a propósito en un commit temporal lo hace fallar
 
 ## 2. Respuestas ocultadas en el threadgate (reply-rendering)
 
-- [ ] 2.1 Mover `hiddenUris` a `src/thread.ts` leyendo `hiddenReplies` como `unknown[]` y quedándose solo con las cadenas (design, decisión 2). Cambiar `Threadgate` en `src/types.ts` y eliminar `HiddenReply`. Añadir tests: lista con una AT-URI, lista vacía, sin threadgate y lista con valores que no son cadenas. Verificar que `deno task test` pasa
-- [ ] 2.2 Verificar en el navegador, con un hilo real que tenga una respuesta ocultada por el autor (o una respuesta del AppView modificada con un `hiddenReplies` de prueba), que esa respuesta y sus subrespuestas no aparecen y que el resto del hilo sí
+- [x] 2.1 Mover `hiddenUris` a `src/thread.ts` leyendo `hiddenReplies` como `unknown[]` y quedándose solo con las cadenas (design, decisión 2). Cambiar `Threadgate` en `src/types.ts` y eliminar `HiddenReply`. Añadir tests: lista con una AT-URI, lista vacía, sin threadgate y lista con valores que no son cadenas. Verificar que `deno task test` pasa
+- [x] 2.2 Verificar en el navegador, con un hilo real que tenga una respuesta ocultada por el autor (o una respuesta del AppView modificada con un `hiddenReplies` de prueba), que esa respuesta y sus subrespuestas no aparecen y que el resto del hilo sí
 
 ## 3. Avatar provisional sin Intl.Segmenter (reply-rendering)
 
-- [ ] 3.1 Mover `getInitials` a `src/text.ts` con la función interna `words` y la alternativa sin `Intl.Segmenter` (design, decisión 4). Añadir tests con y sin `Intl.Segmenter` (quitándolo y restaurándolo en `finally`): "Xulio Zé" da "XZ", un handle da iniciales distintas de `?`, y sin nombre ni handle da `?`. Verificar que `deno task test` pasa
-- [ ] 3.2 Actualizar la fila de `Intl.Segmenter` en la tabla de compatibilidad de `README.md`: sin él las iniciales se calculan separando por espacios, puntos, guiones y guiones bajos, o quitar la fila si ya no hay diferencia visible que documentar. Verificar que el README no dice que el render falla
+- [x] 3.1 Mover `getInitials` a `src/text.ts` con la función interna `words` y la alternativa sin `Intl.Segmenter` (design, decisión 4). Añadir tests con y sin `Intl.Segmenter` (quitándolo y restaurándolo en `finally`): "Xulio Zé" da "XZ", un handle da iniciales distintas de `?`, y sin nombre ni handle da `?`. Verificar que `deno task test` pasa
+- [x] 3.2 Actualizar la fila de `Intl.Segmenter` en la tabla de compatibilidad de `README.md`: sin él las iniciales se calculan separando por espacios, puntos, guiones y guiones bajos, o quitar la fila si ya no hay diferencia visible que documentar. Verificar que el README no dice que el render falla
 
 ## 4. Preferencia sin almacenamiento local (app-chooser)
 
-- [ ] 4.1 Crear `src/pref.ts` con `readPref` y `writePref`, con el `try` envolviendo también el acceso a `localStorage` (design, decisión 3), y sustituir los cuatro accesos de `src/index.ts`. Añadir tests: lectura y escritura normales, y un getter de `localStorage` que lanza `SecurityError` (devuelve `null` y no lanza). Verificar que `deno task test` pasa y que `grep -n localStorage src/index.ts` no da resultados
-- [ ] 4.2 Verificar en el navegador, con `Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('', 'SecurityError'); } })` en un script clásico antes de cargar el módulo, que el hilo se renderiza, que elegir Deer abre Deer y que al reabrir el selector ninguna app aparece resaltada
+- [x] 4.1 Crear `src/pref.ts` con `readPref` y `writePref`, con el `try` envolviendo también el acceso a `localStorage` (design, decisión 3), y sustituir los cuatro accesos de `src/index.ts`. Añadir tests: lectura y escritura normales, y un getter de `localStorage` que lanza `SecurityError` (devuelve `null` y no lanza). Verificar que `deno task test` pasa y que `grep -n localStorage src/index.ts` no da resultados
+- [x] 4.2 Verificar en el navegador, con `Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('', 'SecurityError'); } })` en un script clásico antes de cargar el módulo, que el hilo se renderiza, que elegir Deer abre Deer y que al reabrir el selector ninguna app aparece resaltada
 
 ## 5. Campo «Otra app» accesible (app-chooser)
 
-- [ ] 5.1 En `buildAppPopover`, poner `aria-label` con `t("otherApp")` en el input y `inputMode = "url"`, `autocapitalize = "off"`, `autocomplete = "off"` y `spellcheck = false`. Verificar en el árbol de accesibilidad de DevTools que el nombre del campo es "Other app" en inglés y "Outra app" con `lang="pt"`
+- [x] 5.1 En `buildAppPopover`, poner `aria-label` con `t("otherApp")` en el input y `inputMode = "url"`, `autocapitalize = "off"`, `autocomplete = "off"` y `spellcheck = false`. Verificar en el árbol de accesibilidad de DevTools que el nombre del campo es "Other app" en inglés y "Outra app" con `lang="pt"`
 - [ ] 5.2 En `openCustom`, implementar la validación nativa según el diagrama de la decisión 6 del design (limpiar la validez primero, `setCustomValidity(t("invalidDomain"))` + `reportValidity()` si es inválido, limpiar en el evento `input`). Verificar en Chrome, Firefox y Safari de escritorio, con popover nativo y con el modo de respaldo forzado, que un dominio inválido muestra el globo con "Invalid domain" por encima del panel, que el panel sigue abierto y que corregirlo y enviarlo abre el post
-- [ ] 5.3 Cambiar la descripción de `invalidDomain` en la tabla de cadenas de `README.md` («Reserved for custom domain validation») por su uso real: el mensaje que se muestra al enviar un dominio inválido en «Otra app». Verificar que no queda ninguna mención a «Reserved»
+- [x] 5.3 Cambiar la descripción de `invalidDomain` en la tabla de cadenas de `README.md` («Reserved for custom domain validation») por su uso real: el mensaje que se muestra al enviar un dominio inválido en «Otra app». Verificar que no queda ninguna mención a «Reserved»
 
 ## 6. Verificación integrada
 
@@ -37,7 +37,7 @@
 
 ## 7. Versión 1.1.3
 
-- [ ] 7.1 Subir la versión a 1.1.3 en `package.json`, `package-lock.json` (raíz y `packages[""]`) y `deno.json`, y cambiar todos los `1.1.2` del README (los tres pins de JSR y la frase sobre la versión exacta). Verificar que `grep -rn "1\.1\.2" package.json package-lock.json deno.json README.md` no da resultados
+- [x] 7.1 Subir la versión a 1.1.3 en `package.json`, `package-lock.json` (raíz y `packages[""]`) y `deno.json`, y cambiar todos los `1.1.2` del README (los tres pins de JSR y la frase sobre la versión exacta). Verificar que `grep -rn "1\.1\.2" package.json package-lock.json deno.json README.md` no da resultados
 
 ## Workflow follow-up
 

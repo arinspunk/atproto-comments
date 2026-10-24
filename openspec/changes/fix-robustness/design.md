@@ -61,11 +61,12 @@ Para los tests, `pref.ts` lee el almacenamiento a través de `globalThis.localSt
 `text.ts` tiene una función interna `words(src)`:
 
 - Con `Intl.Segmenter`: igual que ahora, segmentos con `isWordLike`.
-- Sin `Intl.Segmenter`: `src.split(/[\s._\-]+/u).filter(Boolean)`.
+- Sin `Intl.Segmenter`: tramos de letras, dígitos y `_` con sus marcas combinantes, unidos a través de apóstrofos (`/[\p{L}\p{N}_][\p{L}\p{M}\p{N}_]*(?:['’][\p{L}\p{N}_][\p{L}\p{M}\p{N}_]*)*/gu`). Las marcas solo cuentan detrás de una letra o un dígito, para que el selector de variación de los emojis (U+FE0F) no forme una «palabra».
 
 `getInitials` mantiene su firma y su lógica de dos iniciales por punto de código (`[...word][0]`) y `?`.
 
-- Diferencia aceptada: con `Segmenter`, un handle como `xulio.ze.example` es una sola palabra («X»). Sin `Segmenter` son tres palabras («XZ»). La spec solo exige iniciales del handle, no un valor concreto, y unificar los dos modos cambiaría la salida actual en los navegadores modernos, que es lo que hay que evitar en un parche.
+- *Alternativa descartada*: `src.split(/[\s._\-]+/u)`, la que proponía la auditoría. Con `Intl.Segmenter`, ICU ya separa por `.`, `-` y `:` (`xulioze.com` da «XC»), pero no por `_`, y descarta emojis y signos de puntuación. Partir por separadores daba iniciales distintas en 13 de 342 autores de un hilo real (emojis delante del nombre, banderas, comillas). Con la expresión elegida solo difiere 1: un nombre formado solo por un emoji (🆈), que sin `Segmenter` muestra `?`.
+- Diferencia aceptada: en escrituras sin espacios (chino, japonés, tailandés) el fallback devuelve un único tramo y muestra una inicial en vez de dos. Solo pasa en navegadores sin `Intl.Segmenter`.
 - La comprobación es `typeof Intl.Segmenter === "function"` en cada llamada, sin cachear, para que el test pueda quitar `Intl.Segmenter` y restaurarlo en `finally`.
 
 ### 5. Facets: cálculo puro en `facetSegments`, DOM en `index.ts`

@@ -22,60 +22,12 @@ import {
 } from "./i18n.ts";
 
 import { bylineParts } from "./byline.ts";
+import { readPref, writePref } from "./pref.ts";
+import { facetSegments, getInitials, normalizeDomain } from "./text.ts";
+import { hiddenUris, isHiddenByLabel, sortedReplies } from "./thread.ts";
+import type { PostRecord, ProfileViewBasic, ThreadViewPost } from "./types.ts";
 
 export type { StringKey, UiStrings } from "./i18n.ts";
-
-// --- Types ---
-
-interface Label {
-  val: string;
-}
-
-interface Facet {
-  index: { byteStart: number; byteEnd: number };
-  features: Array<
-    | { $type: "app.bsky.richtext.facet#link"; uri: string }
-    | { $type: "app.bsky.richtext.facet#mention"; did: string }
-    | { $type: "app.bsky.richtext.facet#tag"; tag: string }
-    | { $type: string }
-  >;
-}
-
-interface ProfileViewBasic {
-  did?: string;
-  handle?: string;
-  displayName?: string;
-  avatar?: string;
-}
-
-interface PostRecord {
-  text?: string;
-  createdAt?: string;
-  facets?: Facet[];
-}
-
-interface PostView {
-  uri?: string;
-  author?: ProfileViewBasic;
-  record?: PostRecord;
-  replyCount?: number;
-  labels?: Label[];
-}
-
-interface HiddenReply {
-  uri?: string;
-}
-
-interface Threadgate {
-  record?: { hiddenReplies?: HiddenReply[] };
-}
-
-interface ThreadViewPost {
-  $type: string;
-  post?: PostView;
-  replies?: ThreadViewPost[];
-  threadgate?: Threadgate;
-}
 
 // --- i18n ---
 
@@ -91,18 +43,8 @@ const KNOWN_APPS = [
   { label: "Deer", domain: "deer.social" },
 ];
 const KNOWN_DOMAINS = new Set(KNOWN_APPS.map((a) => a.domain));
-const PREF_KEY = "atproto-preferred-app";
 const DEFAULT_APPVIEW = "https://public.api.bsky.app";
 const DEFAULT_MAX_DEPTH = 6;
-
-const HIDE_LABELS = new Set([
-  "!hide",
-  "!no-promote",
-  "porn",
-  "sexual",
-  "graphic-media",
-  "nudity",
-]);
 
 const SUPPORTS_POPOVER = "popover" in HTMLElement.prototype;
 
@@ -135,103 +77,19 @@ function formatAbsoluteDate(iso: string, loc: Loc): string {
   }
 }
 
-function getInitials(displayName: string | undefined, handle: string | undefined): string {
-  const src = (displayName?.trim()) ? displayName.trim() : (handle ?? "");
-  const words = [...new Intl.Segmenter(undefined, { granularity: "word" }).segment(src)]
-    .filter((s) => s.isWordLike)
-    .map((s) => s.segment);
-  if (!words.length) return "?";
-  const first = [...words[0]][0] ?? "";
-  const second = words.length > 1 ? ([...words[1]][0] ?? "") : "";
-  return (first + second).toUpperCase();
-}
-
-function normalizeDomain(raw: string): string | null {
-  if (typeof raw !== "string") return null;
-  const value = raw.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
-  if (!value || /\s/.test(value)) return null;
-  try {
-    const url = new URL("https://" + value);
-    if (url.pathname !== "/" || url.search || !url.hostname.includes(".")) return null;
-    return url.hostname;
-  } catch {
-    return null;
-  }
-}
-
-function isHiddenByLabel(labels: Label[] | undefined): boolean {
-  if (!Array.isArray(labels)) return false;
-  return labels.some((l) => HIDE_LABELS.has(l.val));
-}
-
-function hiddenUris(thread: ThreadViewPost): Set<string> {
-  return new Set(
-    (thread.threadgate?.record?.hiddenReplies ?? [])
-      .map((r) => r.uri)
-      .filter((u): u is string => Boolean(u)),
-  );
-}
-
-function sortedReplies(list: ThreadViewPost[] | undefined): ThreadViewPost[] {
-  return (list ?? [])
-    .filter((r) => r.$type === "app.bsky.feed.defs#threadViewPost")
-    .sort((a, b) => {
-      const ta = new Date(a.post?.record?.createdAt ?? 0).getTime();
-      const tb = new Date(b.post?.record?.createdAt ?? 0).getTime();
-      return ta - tb;
-    });
-}
-
 function buildFacetedText(record: PostRecord): DocumentFragment {
-  const text = record.text ?? "";
-  const facets = record.facets ?? [];
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(text);
-
-  const links: Array<{ start: number; end: number; uri: string }> = [];
-  for (const facet of facets) {
-    for (const feature of facet.features ?? []) {
-      if (feature.$type === "app.bsky.richtext.facet#link" && "uri" in feature) {
-        const uri = feature.uri ?? "";
-        if (uri.startsWith("http://") || uri.startsWith("https://")) {
-          links.push({ start: facet.index.byteStart, end: facet.index.byteEnd, uri });
-        }
-      } else if (feature.$type === "app.bsky.richtext.facet#mention" && "did" in feature) {
-        links.push({
-          start: facet.index.byteStart,
-          end: facet.index.byteEnd,
-          uri: `https://bsky.app/profile/${feature.did}`,
-        });
-      } else if (feature.$type === "app.bsky.richtext.facet#tag" && "tag" in feature) {
-        links.push({
-          start: facet.index.byteStart,
-          end: facet.index.byteEnd,
-          uri: `https://bsky.app/hashtag/${encodeURIComponent(feature.tag)}`,
-        });
-      }
-    }
-  }
-  links.sort((a, b) => a.start - b.start);
-
   const fragment = document.createDocumentFragment();
-  const decoder = new TextDecoder();
-  let pos = 0;
-
-  for (const link of links) {
-    if (link.start < pos || link.end <= link.start || link.end > bytes.length) continue;
-    if (link.start > pos) {
-      fragment.appendChild(document.createTextNode(decoder.decode(bytes.slice(pos, link.start))));
+  for (const segment of facetSegments(record)) {
+    if (segment.href === undefined) {
+      fragment.appendChild(document.createTextNode(segment.text));
+      continue;
     }
     const a = document.createElement("a");
-    a.href = link.uri;
+    a.href = segment.href;
     a.rel = "noopener noreferrer";
     a.target = "_blank";
-    a.textContent = decoder.decode(bytes.slice(link.start, link.end));
+    a.textContent = segment.text;
     fragment.appendChild(a);
-    pos = link.end;
-  }
-  if (pos < bytes.length) {
-    fragment.appendChild(document.createTextNode(decoder.decode(bytes.slice(pos))));
   }
   return fragment;
 }
@@ -276,7 +134,7 @@ function buildAppPopover(
   loc: Loc,
   close: () => void,
 ): HTMLElement {
-  const preferred = localStorage.getItem(PREF_KEY);
+  const preferred = readPref();
   const popover = document.createElement("div");
   popover.id = popoverId;
   popover.className = "atproto-app-popover";
@@ -299,7 +157,7 @@ function buildAppPopover(
     a.className = "atproto-app-popover__link" +
       (preferred === app.domain ? " atproto-app-popover__link--active" : "");
     a.addEventListener("click", () => {
-      localStorage.setItem(PREF_KEY, app.domain);
+      writePref(app.domain);
       close();
     });
     popover.appendChild(a);
@@ -316,6 +174,12 @@ function buildAppPopover(
   const input = document.createElement("input");
   input.type = "text";
   input.placeholder = t("inputPlaceholder");
+  input.setAttribute("aria-label", t("otherApp"));
+  // A domain, not prose: keep the mobile keyboard from capitalizing or correcting it.
+  input.inputMode = "url";
+  input.autocapitalize = "off";
+  input.autocomplete = "off";
+  input.spellcheck = false;
   input.className = "atproto-app-popover__input";
   if (preferred && !KNOWN_DOMAINS.has(preferred)) input.value = preferred;
 
@@ -324,20 +188,30 @@ function buildAppPopover(
   btn.textContent = "→";
   btn.className = "atproto-app-popover__go";
 
+  function clearInvalid() {
+    input.setCustomValidity("");
+    input.removeAttribute("aria-invalid");
+  }
+
   function openCustom() {
+    clearInvalid();
     const domain = normalizeDomain(input.value);
     if (!domain) {
+      // The browser shows and announces the message; reportValidity() also focuses
+      // the input, so the panel stays open on scroll or resize.
+      input.setCustomValidity(t("invalidDomain"));
       input.setAttribute("aria-invalid", "true");
+      input.reportValidity();
       return;
     }
-    input.removeAttribute("aria-invalid");
-    localStorage.setItem(PREF_KEY, domain);
+    writePref(domain);
     window.open(`https://${domain}/profile/${targetDid}/post/${targetRkey}`, "_blank", "noopener,noreferrer");
     close();
   }
 
   btn.addEventListener("click", openCustom);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") openCustom(); });
+  input.addEventListener("input", clearInvalid);
 
   customWrap.appendChild(input);
   customWrap.appendChild(btn);
@@ -378,7 +252,7 @@ function buildAppAction(
 
   // Shared by both modes; the panel must already be visible so it can be measured.
   function onOpen() {
-    const preferred = localStorage.getItem(PREF_KEY);
+    const preferred = readPref();
     for (const a of popover.querySelectorAll<HTMLAnchorElement>(".atproto-app-popover__link")) {
       let hostname = "";
       try { hostname = new URL(a.href).hostname; } catch { /* ignore */ }
@@ -387,6 +261,8 @@ function buildAppAction(
     const input = popover.querySelector<HTMLInputElement>(".atproto-app-popover__input");
     if (input) {
       input.value = preferred && !KNOWN_DOMAINS.has(preferred) ? preferred : "";
+      input.setCustomValidity("");
+      input.removeAttribute("aria-invalid");
     }
 
     const rect = btn.getBoundingClientRect();

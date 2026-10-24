@@ -73,7 +73,7 @@ async function toAtUri(postUrl) {
 
 ### CDN
 
-See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.1.2`) to update only when you choose.
+See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.1.3`) to update only when you choose.
 
 ### npm
 
@@ -89,13 +89,13 @@ import 'atproto-comments/style.css';
 ### JSR (Deno)
 
 ```ts
-import 'jsr:@arinspunk/atproto-comments@1.1.2';
+import 'jsr:@arinspunk/atproto-comments@1.1.3';
 ```
 
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
 
 ```html
-<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.1.2/src/atproto-comments.css">
+<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.1.3/src/atproto-comments.css">
 ```
 
 Or, in a static site generator, download it at build time. For example, in Lume:
@@ -103,7 +103,7 @@ Or, in a static site generator, download it at build time. For example, in Lume:
 ```ts
 site.remoteFile(
   "vendor/atproto-comments.css",
-  "https://jsr.io/@arinspunk/atproto-comments/1.1.2/src/atproto-comments.css",
+  "https://jsr.io/@arinspunk/atproto-comments/1.1.3/src/atproto-comments.css",
 );
 site.copy("vendor/atproto-comments.css");
 ```
@@ -178,7 +178,7 @@ Invalid JSON, unknown keys and non-string values are ignored.
 | `replyTo` | `Reply to {name}` | Accessible label of the reply button; `{name}` is the author |
 | `otherApp` | `Other app` | Separator in the app picker |
 | `inputPlaceholder` | `app.example` | Placeholder of the custom app domain input |
-| `invalidDomain` | `Invalid domain` | Reserved for custom domain validation |
+| `invalidDomain` | `Invalid domain` | Message shown when the custom app domain is not valid |
 | `error` | `Comments couldn't be loaded.` | Load error message |
 | `viewMore` | `View more on Bluesky` | Link when a reply has unloaded replies |
 | `now` | `now` | Relative time under one minute |
@@ -291,7 +291,7 @@ Works in current versions of Chrome, Edge, Firefox and Safari, and in Safari on 
 | Feature used | Chrome / Edge | Firefox | Safari / iOS | Without it |
 |---|---|---|---|---|
 | [Popover API](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API) | 114 | 125 | 17 | The component shows the app picker itself (see below) |
-| `Intl.Segmenter` | 87 | 125 | 14.1 | Rendering fails for authors without an avatar |
+| `Intl.Segmenter` | 87 | 125 | 14.1 | Avatar placeholders show one initial instead of two for names in scripts without spaces (Chinese, Japanese, Thai) |
 | CSS `:has()` | 105 | 121 | 15.4 | Thread lines between nested replies are not drawn |
 | CSS `oklch()` | 111 | 113 | 15.4 | Default colors don't apply; set the `--atproto-*` variables |
 
