@@ -144,7 +144,7 @@ Content you put inside the element yourself is kept; the component only replaces
 
 - Replies are listed oldest first, nested up to `max-depth` levels. When a reply has more replies than were loaded, a **View more replies** link appears under it.
 - Dates are shown as relative time (`5 m`, `3 d`), and replies more than a year old show the short date in the page's language (`1/2/20` in `en-US`, `02/01/20` in `pt-PT`). The full date and time appear on hover.
-- Links, mentions and hashtags in the text are clickable. Mentions and **View more replies** open in the app the visitor chose in the app picker, or on bsky.app if they haven't chosen one. Hashtags always open on bsky.app, since other apps may not have hashtag pages.
+- Links, mentions and hashtags in the text are clickable. Mentions and **View more replies** open in the app the visitor chose in the app picker, or on bsky.app if they haven't chosen one. Hashtags open in the chosen app if it is Bluesky, Mu or Deer; with a custom domain they open on bsky.app, since that app may not have hashtag pages.
 - The anchor post itself is not shown, only its replies.
 - If the post has no replies, does not exist or is blocked, only the **Comment** button is shown. If the replies can't be loaded, an error message appears instead.
 

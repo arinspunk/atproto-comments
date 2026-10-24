@@ -16,7 +16,7 @@ Es el último change de la auditoría de la versión 1.1.2 (puntos 2.2, 2.4, 2.5
 
 ## What Changes
 
-- **Menciones y «View more»** abren en la app preferida del visitante (Bluesky, Mu, Deer o su dominio personalizado), y en bsky.app si no ha elegido ninguna. Los hashtags siguen yendo a bsky.app, porque otras apps pueden no tener la ruta `/hashtag/`. El enlace usa la preferencia del momento en que se abre, no la del render.
+- **Menciones y «View more»** abren en la app preferida del visitante (Bluesky, Mu, Deer o su dominio personalizado), y en bsky.app si no ha elegido ninguna. **Los hashtags** abren en la app elegida si es Bluesky, Mu o Deer, que tienen la ruta `/hashtag/`, y en bsky.app con un dominio personalizado, del que no se sabe si la tiene. El enlace usa la preferencia del momento en que se abre, no la del render.
 - **Texto por defecto de `viewMore`:** pasa de «View more on Bluesky» / «Ver mais no Bluesky» a «View more replies» / «Ver mais respostas», porque ya no va siempre a Bluesky. Quien tenga `viewMore` personalizado no nota el cambio.
 - **Clave nueva `unknownAuthor`** («Unknown» / «Desconhecido») para el autor sin nombre ni handle.
 - **Fechas de más de un año** con el formato corto del idioma de la página (`Intl.DateTimeFormat`, `dateStyle: "short"`). Las unidades relativas (`5 m`, `3 d`) no cambian.
@@ -36,13 +36,13 @@ Fuera de este change: crear el panel del selector solo al abrirlo (4.1), que se 
 
 ### Modified Capabilities
 - `app-chooser`: el botón deja de anunciarse como menú emergente («Estado accesible del botón»), y el botón de enviar dominio tiene nombre accesible.
-- `reply-rendering`: menciones y «View more» abren en la app preferida; las respuestas de autores con etiquetas de cuenta no se muestran; sin lista vacía cuando todas las respuestas están ocultas.
+- `reply-rendering`: menciones, «View more» y hashtags (estos solo con las apps conocidas) abren en la app preferida; las respuestas de autores con etiquetas de cuenta no se muestran; sin lista vacía cuando todas las respuestas están ocultas.
 - `ui-localization`: claves nuevas `go` y `unknownAuthor` en la tabla documentada, texto por defecto neutro de `viewMore`, y fechas de más de un año en el formato del idioma.
 - `element-lifecycle`: estado de carga visible para tecnologías de asistencia y para la web.
 
 ## Impact
 
-- `src/text.ts`: `facetSegments` deja de fijar `bsky.app` en las menciones; devuelve qué tipo de enlace es para que el DOM construya la URL con la app preferida.
+- `src/text.ts`: `facetSegments` deja de fijar `bsky.app` en las menciones y los hashtags; devuelve qué tipo de enlace es para que el DOM construya la URL con la app preferida.
 - `src/byline.ts`: `bylineParts` recibe el texto de `unknownAuthor`.
 - `src/i18n.ts`: claves `go` y `unknownAuthor`, y textos nuevos de `viewMore` en `en` y `pt`.
 - `src/types.ts`: `labels` en `ProfileViewBasic` y `uri` en `Label`.

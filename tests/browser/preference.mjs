@@ -96,14 +96,41 @@ export const scenarios = [
     expected: { mention: `https://app.example/profile/${BOB}` },
   },
   {
-    name: "hashtag en bsky.app aunque haya preferencia",
+    name: "hashtag con una app conocida: en Deer",
     body: BODY,
     init: withThread("L", LINKS) + pref("deer.social"),
     run: async (page) => {
       await page.waitForTimeout(200);
       return { tag: await hrefOnClick(page, TAG) };
     },
-    expected: { tag: "https://bsky.app/hashtag/tag" },
+    expected: { tag: "https://deer.social/hashtag/tag" },
+  },
+  {
+    name: "hashtag con un dominio personalizado: en bsky.app",
+    body: BODY,
+    init: withThread("L", LINKS) + pref("app.example"),
+    run: async (page) => {
+      await page.waitForTimeout(200);
+      return { tag: await hrefOnClick(page, TAG), mention: await hrefOnClick(page, MENTION) };
+    },
+    expected: { tag: "https://bsky.app/hashtag/tag", mention: `https://app.example/profile/${BOB}` },
+  },
+  {
+    name: "hashtag con acentos: codificado en la URL",
+    body: `<atproto-comments thread-uri="${U("C")}"></atproto-comments>${MOD}`,
+    init: withThread("C", threadView("C", [
+      replyView("c1", {
+        record: {
+          text: "#café",
+          facets: [{ index: { byteStart: 0, byteEnd: 6 }, features: [{ $type: "app.bsky.richtext.facet#tag", tag: "café" }] }],
+        },
+      }),
+    ])) + pref("mu.social"),
+    run: async (page) => {
+      await page.waitForTimeout(200);
+      return { tag: await hrefOnClick(page, TAG) };
+    },
+    expected: { tag: "https://mu.social/hashtag/caf%C3%A9" },
   },
   {
     name: "etiquetas del autor: de cuenta oculta, de perfil no",

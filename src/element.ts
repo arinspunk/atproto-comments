@@ -56,17 +56,29 @@ function supportsPopover(): boolean {
   return (popoverSupport ??= "popover" in HTMLElement.prototype);
 }
 
-/** Paths of the links that open in the visitor's preferred app. */
-const appLinks = new WeakMap<HTMLAnchorElement, string>();
-
-function appBase(): string {
-  return `https://${readPref() ?? "bsky.app"}`;
+/** A link that opens in the visitor's preferred app. */
+interface AppLink {
+  path: string;
+  /** Any preferred app, custom domains included; otherwise only one of KNOWN_APPS. */
+  anyApp: boolean;
 }
 
-/** Points `a` at `path` in the preferred app, and keeps it up to date (see refreshAppLink). */
-function setAppLink(a: HTMLAnchorElement, path: string): void {
-  appLinks.set(a, path);
-  a.href = appBase() + path;
+const appLinks = new WeakMap<HTMLAnchorElement, AppLink>();
+
+/**
+ * Origin of the preferred app, or bsky.app without one. Routes that not every
+ * app may have (hashtags) pass `anyApp = false`, so a custom domain falls back
+ * to bsky.app too.
+ */
+function appBase(anyApp: boolean): string {
+  const pref = readPref();
+  return `https://${pref && (anyApp || KNOWN_DOMAINS.has(pref)) ? pref : "bsky.app"}`;
+}
+
+/** Points `a` at `link.path` in the preferred app, and keeps it up to date (see refreshAppLink). */
+function setAppLink(a: HTMLAnchorElement, link: AppLink): void {
+  appLinks.set(a, link);
+  a.href = appBase(link.anyApp) + link.path;
 }
 
 /**
@@ -76,19 +88,20 @@ function setAppLink(a: HTMLAnchorElement, path: string): void {
  */
 function refreshAppLink(e: Event): void {
   const a = e.target instanceof Element ? e.target.closest("a") : null;
-  const path = a ? appLinks.get(a) : undefined;
-  if (a && path) a.href = appBase() + path;
+  const link = a ? appLinks.get(a) : undefined;
+  if (a && link) a.href = appBase(link.anyApp) + link.path;
 }
 
 function buildFacetedText(record: PostRecord): DocumentFragment {
   const fragment = document.createDocumentFragment();
   for (const segment of facetSegments(record)) {
-    if (segment.href === undefined && segment.mention === undefined) {
+    if (segment.href === undefined && segment.mention === undefined && segment.tag === undefined) {
       fragment.appendChild(document.createTextNode(segment.text));
       continue;
     }
     const a = document.createElement("a");
-    if (segment.mention !== undefined) setAppLink(a, `/profile/${segment.mention}`);
+    if (segment.mention !== undefined) setAppLink(a, { path: `/profile/${segment.mention}`, anyApp: true });
+    else if (segment.tag !== undefined) setAppLink(a, { path: `/hashtag/${encodeURIComponent(segment.tag)}`, anyApp: false });
     else a.href = segment.href!;
     a.rel = "noopener noreferrer";
     a.target = "_blank";
@@ -426,7 +439,7 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   if ((post.replyCount ?? 0) > loadedReplies.length) {
     const more = document.createElement("a");
     more.className = "atproto-reply__more";
-    setAppLink(more, `/profile/${authorDid}/post/${replyRkey}`);
+    setAppLink(more, { path: `/profile/${authorDid}/post/${replyRkey}`, anyApp: true });
     more.target = "_blank";
     more.rel = "noopener noreferrer";
     more.textContent = translate(loc.strings, "viewMore");

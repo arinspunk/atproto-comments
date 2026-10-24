@@ -12,7 +12,7 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Changed
 
-- Mentions and the link to more replies open in the app the visitor chose in the app picker, or on bsky.app if they haven't chosen one. The link uses the app chosen when it is opened, even if that changed after the replies rendered. Hashtags still open on bsky.app.
+- Mentions and the link to more replies open in the app the visitor chose in the app picker, or on bsky.app if they haven't chosen one. Hashtags do too when the chosen app is Bluesky, Mu or Deer; with a custom domain they still open on bsky.app. Links use the app chosen when they are opened, even if that changed after the replies rendered.
 - The default `viewMore` text is now `View more replies` (`Ver mais respostas`), since the link no longer always goes to Bluesky. Set `viewMore` in `strings` to keep the old text.
 - Replies more than a year old show the short date in the page's language (`1/2/20` in `en-US`, `02/01/20` in `pt-PT`) instead of a fixed `dd/mm/yyyy`.
 - The button that opens the app picker no longer has `aria-haspopup`: the picker is not a menu.

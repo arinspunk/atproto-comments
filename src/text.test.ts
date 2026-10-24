@@ -51,14 +51,14 @@ Deno.test("facetSegments uses byte offsets with emojis and accents", () => {
     { text: ", mira " },
     { text: "https://ex.example", href: "https://ex.example" },
     { text: " ✨ " },
-    { text: "#Galiza", href: "https://bsky.app/hashtag/Galiza" },
+    { text: "#Galiza", tag: "Galiza" },
   ]);
 });
 
-Deno.test("facetSegments encodes hashtags in the URL", () => {
+Deno.test("facetSegments keeps the hashtag as written, unencoded", () => {
   const text = "#café";
   const segments = facetSegments({ text, facets: [{ index: range(text, text), features: [{ $type: TAG, tag: "café" }] }] });
-  assertEquals(segments, [{ text: "#café", href: "https://bsky.app/hashtag/caf%C3%A9" }]);
+  assertEquals(segments, [{ text: "#café", tag: "café" }]);
 });
 
 Deno.test("facetSegments skips overlapping facets", () => {

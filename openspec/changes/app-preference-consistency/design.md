@@ -26,7 +26,6 @@ Motivación en `proposal.md`; comportamiento esperado en los deltas de `app-choo
 **Non-Goals:**
 - Crear el panel del selector al abrirlo (4.1): cambia el DOM documentado y se descartó.
 - `Intl.RelativeTimeFormat` para las unidades relativas.
-- Que los hashtags sigan la app preferida.
 - Un texto o esqueleto de carga por defecto.
 
 ## Decisions
@@ -39,10 +38,11 @@ Motivación en `proposal.md`; comportamiento esperado en los deltas de `app-choo
                                                               href = https://<readPref() ?? "bsky.app"><ruta>
 ```
 
-- `appBase()` devuelve `https://${readPref() ?? "bsky.app"}`. `readPref` ya cubre el almacenamiento bloqueado.
-- Las menciones y «View more» se crean con el `href` calculado en el render, para que funcionen sin JavaScript extra y se vean bien al pasar el ratón. La ruta se guarda en un `WeakMap<HTMLAnchorElement, string>` a nivel de módulo, sin atributos nuevos en el DOM.
+- `appBase(anyApp)` devuelve `https://<preferencia>` o `https://bsky.app`. Con `anyApp` en `true` (menciones y «View more») vale cualquier preferencia; con `false` (hashtags) solo una de `KNOWN_APPS`, y un dominio personalizado cae en bsky.app. `readPref` ya cubre el almacenamiento bloqueado.
+- **Hashtags:** las rutas `/profile/<did>` y `/profile/<did>/post/<rkey>` ya las usa el selector en todas las apps, pero `/hashtag/<tag>` no. Se comprobó a mano que Mu la tiene; Bluesky es la referencia, y Deer es un fork de la app de Bluesky (pendiente de confirmar en la verificación manual, tarea 5.2). Un dominio personalizado puede no tenerla, y un 404 es peor que abrir el hashtag en bsky.app. Por eso los hashtags solo siguen la preferencia si es una app conocida.
+- Las menciones, los hashtags y «View more» se crean con el `href` calculado en el render, para que funcionen sin JavaScript extra y se vean bien al pasar el ratón. La ruta y si admite cualquier app se guardan en un `WeakMap<HTMLAnchorElement, { path, anyApp }>` a nivel de módulo, sin atributos nuevos en el DOM.
 - El elemento escucha `pointerdown`, `focusin` y `click` en fase de captura y, si el destino está en el `WeakMap`, vuelve a calcular el `href`. Así un cambio de preferencia posterior al render se aplica antes de cualquier forma de abrir el enlace: clic, clic central, menú contextual («copiar enlace») o Enter con el teclado. Los listeners se añaden en el constructor, una vez por elemento.
-- `facetSegments` deja de construir la URL de las menciones: devuelve `{ text, mention: did }` para ellas y `{ text, href }` para enlaces y hashtags, que no cambian. `buildFacetedText` construye la mención con `appBase()` y registra su ruta.
+- `facetSegments` deja de construir la URL de las menciones y los hashtags: devuelve `{ text, mention: did }` y `{ text, tag }`, y `{ text, href }` para los enlaces, que no cambian. `buildFacetedText` construye esas URLs con `appBase()` y registra su ruta; el tag se codifica con `encodeURIComponent` al construir la ruta, como antes.
 - *Alternativa descartada*: calcular el `href` solo en el render. Un visitante que elige app y luego pulsa una mención abriría bsky.app hasta el siguiente render.
 - *Alternativa descartada*: re-renderizar todos los elementos al cambiar la preferencia. Necesita un evento global entre instancias y cerraría los selectores abiertos.
 

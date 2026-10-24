@@ -2,8 +2,8 @@
 
 ## ADDED Requirements
 
-### Requirement: Menciones y «View more» abren en la app preferida
-Los enlaces de las menciones y el enlace «View more» de una respuesta SHALL abrir en la app que el visitante eligió en el selector, o en bsky.app si no ha elegido ninguna o el almacenamiento no está disponible. El enlace SHALL usar la preferencia vigente cuando el visitante lo abre, aunque la haya cambiado después de renderizarse. Los hashtags SHALL seguir abriendo en bsky.app.
+### Requirement: Los enlaces del texto abren en la app preferida
+Los enlaces de las menciones y el enlace «View more» de una respuesta SHALL abrir en la app que el visitante eligió en el selector, o en bsky.app si no ha elegido ninguna o el almacenamiento no está disponible. Los hashtags SHALL abrir en la app elegida solo si es Bluesky, Mu o Deer, y en bsky.app con un dominio personalizado o sin preferencia. Cada enlace SHALL usar la preferencia vigente cuando el visitante lo abre, aunque la haya cambiado después de renderizarse.
 
 #### Scenario: Sin preferencia
 - **WHEN** el visitante no ha elegido ninguna app y abre la mención de un usuario
@@ -21,9 +21,13 @@ Los enlaces de las menciones y el enlace «View more» de una respuesta SHALL ab
 - **WHEN** el visitante eligió el dominio personalizado `app.example` y abre una mención
 - **THEN** se abre `https://app.example/profile/<did>`
 
-#### Scenario: Hashtag
+#### Scenario: Hashtag con una app conocida
 - **WHEN** el visitante eligió Deer y abre un hashtag
-- **THEN** se abre `https://bsky.app/hashtag/<tag>`
+- **THEN** se abre `https://deer.social/hashtag/<tag>`
+
+#### Scenario: Hashtag con un dominio personalizado
+- **WHEN** el visitante eligió el dominio personalizado `app.example` y abre un hashtag
+- **THEN** se abre `https://bsky.app/hashtag/<tag>`, porque no se sabe si esa app tiene la ruta `/hashtag/`
 
 ### Requirement: Las respuestas de autores etiquetados no se muestran
 Una respuesta cuyo autor lleva sobre su cuenta alguna de las etiquetas que ya ocultan un post SHALL NOT mostrarse, y con ella SHALL ocultarse todo su subárbol de respuestas. Una etiqueta es de la cuenta cuando su `uri` es el DID del autor. Las etiquetas puestas sobre el registro de perfil del autor (`at://<did>/app.bsky.actor.profile/self`) SHALL NOT ocultar sus respuestas.
