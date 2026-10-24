@@ -1,3 +1,6 @@
 node_modules/
 dist/
 deno.lock
+
+# Temporary copy of .github for agent edits (see .claude/skills/ci-workflows)
+github-copy/
