@@ -57,6 +57,16 @@ Motivación en `proposal.md`; comportamiento esperado en el delta de `package-di
 - Los inicializadores de campos (`createScheduler(...)`) no tocan el DOM, así que la clase se puede evaluar en Node y Deno.
 - Se cubre con un test de Deno (`src/entrypoints.test.ts`) que importa `./index.ts` y `./element.ts` y comprueba que `AtprotoComments` es una función y que `globalThis.customElements` sigue sin existir. Deno no tiene `HTMLElement` ni `customElements`, así que el test reproduce el servidor. Para el `dist` de npm se añade una comprobación en Node (decisión 6).
 
+### 2b. Estilos con cualquier nombre de etiqueta
+
+Hallado al probar a mano en Firefox y Safari: un `<my-comments>` se ve sin estilos, porque las variables `--atproto-*` y el `display: block` de `src/atproto-comments.css` van en el selector de etiqueta `atproto-comments`. Con otro nombre, todos los `var(--atproto-…)` quedan sin valor. Ya pasaba con la subclase que documentaba el README desde 1.1.x, pero `./element` hace que se note más.
+
+- `connectedCallback` añade la clase `atproto-comments` al elemento con `classList.add`, que respeta las clases que ya tenga. No se hace en el constructor, porque un elemento creado por el parser no puede tener atributos nuevos durante su construcción.
+- La regla pasa a `atproto-comments, :where(.atproto-comments)`. `:where()` deja la especificidad de la clase en 0, así que para `<atproto-comments>` la regla pesa exactamente lo mismo que en 1.2.0 y las personalizaciones con el selector de etiqueta siguen ganando. Con otro nombre, se personaliza con `my-comments { … }`, que también gana.
+- *Alternativa descartada*: `atproto-comments, .atproto-comments`. La clase pesaría más que una etiqueta y las personalizaciones `atproto-comments { --atproto-… }` de las webs dejarían de aplicarse.
+- *Alternativa descartada*: solo documentarlo. Obligaría a copiar las reglas a cada nombre de etiqueta.
+- La clase `atproto-comments` es pública y se documenta en «Markup» del README.
+
 ### 3. Bundles con nombres fijos
 
 `scripts/build.js` genera dos archivos ESM con nombre fijo, sin chunks:

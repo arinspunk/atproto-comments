@@ -22,6 +22,14 @@ await esbuild.build({
 });
 
 const shown = (x) => ({ replies: [`reply-of-${x}`], lists: 1, error: 0 });
+const CSS = `<link rel="stylesheet" href="atproto-comments.css">`;
+
+/** Computed styles that depend on the stylesheet's custom properties. */
+const looks = (sel) => {
+  const el = document.querySelector(sel);
+  const avatar = getComputedStyle(el.querySelector(".atproto-reply__avatar--placeholder"));
+  return { display: getComputedStyle(el).display, width: avatar.width, background: avatar.backgroundColor };
+};
 
 export const scenarios = [
   {
@@ -52,6 +60,38 @@ export const scenarios = [
       return { a: state("atproto-comments"), b: state("my-comments") };
     },
     expected: { a: { ...shown("A"), mainBtn: ["Comment"] }, b: { ...shown("B"), mainBtn: ["Comment"] } },
+  },
+  {
+    name: "estilos: <my-comments> se ve igual que <atproto-comments>",
+    body: `${CSS}<atproto-comments thread-uri="${U("A")}"></atproto-comments><my-comments thread-uri="${U("B")}"></my-comments>
+      <script type="module">import { AtprotoComments } from "./index.js"; customElements.define("my-comments", class extends AtprotoComments {});</script>`,
+    evaluate: async () => {
+      await sleep(200);
+      const a = window.looks("atproto-comments"), b = window.looks("my-comments");
+      return { same: JSON.stringify(a) === JSON.stringify(b), display: b.display, a, b };
+    },
+    init: `window.looks = ${looks.toString()};`,
+    expected: { same: true, display: "block" },
+  },
+  {
+    name: "estilos: el elemento conserva sus clases y añade atproto-comments",
+    body: `<atproto-comments class="mine" thread-uri="${U("A")}"></atproto-comments>${MOD}`,
+    evaluate: async () => {
+      await sleep(200);
+      return { classes: [...document.querySelector("atproto-comments").classList].sort() };
+    },
+    expected: { classes: ["atproto-comments", "mine"] },
+  },
+  {
+    name: "estilos: la personalización con el selector de etiqueta sigue ganando",
+    body: `${CSS}<style>atproto-comments { --atproto-avatar-bg: red; }</style>
+      <atproto-comments thread-uri="${U("A")}"></atproto-comments>${MOD}`,
+    evaluate: async () => {
+      await sleep(200);
+      return { background: window.looks("atproto-comments").background };
+    },
+    init: `window.looks = ${looks.toString()};`,
+    expected: { background: "rgb(255, 0, 0)" },
   },
   {
     name: "importar el punto de entrada principal dos veces",

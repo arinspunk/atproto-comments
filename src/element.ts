@@ -565,6 +565,10 @@ export class AtprotoComments extends Base {
   }
 
   connectedCallback(): void {
+    // The stylesheet targets this class too, so a subclass registered under
+    // another tag name gets the same styles. Not in the constructor: an element
+    // must not gain attributes while it is being created.
+    this.classList.add("atproto-comments");
     this.#schedule();
   }
 

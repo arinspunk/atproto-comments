@@ -48,6 +48,21 @@ Los archivos ESM publicados (`dist/index.js` y `dist/element.js`) SHALL importar
 - **WHEN** una página importa `atproto-comments` y también `AtprotoComments` desde `atproto-comments/element`
 - **THEN** `customElements.get("atproto-comments") === AtprotoComments`
 
+### Requirement: Los estilos se aplican con cualquier nombre de etiqueta
+La hoja de estilos del paquete SHALL aplicarse igual a un elemento registrado con otro nombre de etiqueta que a `<atproto-comments>`. Para eso, el elemento conectado SHALL llevar la clase `atproto-comments`, sin quitar las clases que ya tenga. Las personalizaciones escritas con el selector de etiqueta (`atproto-comments { --atproto-… }`) SHALL seguir teniendo prioridad sobre los valores por defecto, como hasta ahora.
+
+#### Scenario: Otro nombre de etiqueta con la hoja de estilos
+- **WHEN** una página carga la hoja de estilos del paquete y registra la clase como `my-comments`
+- **THEN** un `<my-comments>` con `thread-uri` se muestra como bloque y su avatar provisional tiene el mismo tamaño y color de fondo que el de un `<atproto-comments>`
+
+#### Scenario: Clases propias del elemento
+- **WHEN** el elemento tiene `class="mine"` en el HTML y se conecta
+- **THEN** su atributo `class` contiene `mine` y `atproto-comments`
+
+#### Scenario: Personalización con el selector de etiqueta
+- **WHEN** la página define `atproto-comments { --atproto-avatar-bg: red }` después de cargar la hoja de estilos del paquete
+- **THEN** el avatar provisional de `<atproto-comments>` tiene fondo rojo
+
 ### Requirement: Importar sin DOM no hace nada
 Importar cualquiera de los dos puntos de entrada en un entorno sin DOM (sin `HTMLElement` ni `customElements`, como el servidor en SSR) SHALL NOT lanzar errores y SHALL NOT registrar nada.
 

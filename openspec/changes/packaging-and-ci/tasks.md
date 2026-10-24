@@ -7,6 +7,10 @@
 - [x] 1.3 Cambiar `exports` de `deno.json` a un mapa con `.` y `./element`. Verificar con `deno publish --dry-run --allow-dirty` que se listan los dos puntos de entrada
 - [x] 1.4 Añadir `src/entrypoints.test.ts`: importar `./index.ts` y `./element.ts` sin DOM no lanza, `AtprotoComments` es una función y `globalThis.customElements` sigue siendo `undefined`. Verificar que `deno task test` pasa
 
+- [x] 1.5 Añadir en `connectedCallback` la clase `atproto-comments` con `classList.add` y cambiar el selector de `src/atproto-comments.css` a `atproto-comments, :where(.atproto-comments)` (design, decisión 2b). Verificar que `npx tsc --noEmit` y `deno task test` pasan
+- [x] 1.6 Añadir a `entrypoints.mjs` los escenarios del requisito «Los estilos se aplican con cualquier nombre de etiqueta» (estilos calculados de `<my-comments>` iguales a los de `<atproto-comments>`, clases propias conservadas y personalización con el selector de etiqueta). Verificar que pasan en Chromium y WebKit, y que el primero falla con la hoja de estilos de 1.2.0
+- [x] 1.7 Documentar la clase en «Markup» y en «Custom element name» del README (con otro nombre se personaliza con `my-comments { … }`), y añadirla a «Added» del CHANGELOG. Verificar a mano en Firefox y Safari que `two-tags.html` y `element-only.html` muestran `<my-comments>` con los mismos estilos que `<atproto-comments>`. Resultado: correcto en Firefox y Safari de escritorio
+
 ## 2. Build, tipos y package.json
 
 - [x] 2.1 En `scripts/build.js`, construir `dist/element.js` desde `src/element.ts` y `dist/index.js` desde `src/index.ts` con el plugin `element-external`, sin `splitting` ni chunks, y mantener `dist/index.umd.js` y el CSS (design, decisión 3). Eliminar `scripts/build.ts` y cambiar `deno task build` a `node scripts/build.js` (decisión 5). Verificar que:
@@ -27,7 +31,7 @@
   - añadir temporalmente al README una frase con «Svelte 5.0.0» no lo hace fallar;
   - un README sin ningún pin lo hace fallar
 - [x] 3.2 Siguiendo la skill `ci-workflows` (recordar al usuario que la copia esquiva la regla de la organización y pedirle `! cp -R .github github-copy`), añadir en `ci.yml` la comprobación de versiones tras `npm ci` y la importación en Node de `dist/index.js` y `dist/element.js` tras el build, y en `release.yml` la comprobación con `--tag` antes de los tests. Validar el YAML con el comando de la skill y pedir al usuario que devuelva los archivos y borre la copia. Verificar con `git status --short` que solo cambian los dos workflows y que `github-copy/` no existe
-- [ ] 3.3 Verificar en GitHub que el CI de la rama pasa, y que un commit temporal con un pin del README descuadrado lo hace fallar en el paso de versiones. Revertir el commit temporal
+- [x] 3.3 Verificar en GitHub que el CI de la rama pasa, y que un commit temporal con un pin del README descuadrado lo hace fallar en el paso de versiones. Revertir el commit temporal
 
 ## 4. Batería de navegador (tests/browser)
 
@@ -43,8 +47,8 @@
 ## 6. Verificación integrada y versión
 
 - [x] 6.1 Ejecutar `npx tsc --noEmit`, `deno task check`, `deno task test`, `npm run build`, `npm run check:versions` y `npm run test:browser` y verificar que pasan
-- [ ] 6.2 En Firefox y Safari de escritorio, verificar a mano con las páginas de `tests/browser` que `<atproto-comments>` y `<my-comments>` funcionan a la vez sin errores y que `index.umd.js` con `<script>` clásico muestra el hilo
-- [ ] 6.3 Subir la versión a 1.3.0 en `package.json`, `package-lock.json` (raíz y `packages[""]`) y `deno.json`, cambiar los pins del README y fechar la sección del CHANGELOG como `[1.3.0]`. Verificar que `npm run check:versions` pasa y que `node scripts/check-versions.js --tag v1.3.0` también
+- [x] 6.2 En Firefox y Safari de escritorio, verificar a mano con las páginas de `tests/browser` que `<atproto-comments>` y `<my-comments>` funcionan a la vez sin errores y que `index.umd.js` con `<script>` clásico muestra el hilo. Resultado: todas las páginas de `tests/browser/manual` dan PASS en Firefox y Safari de escritorio, sin errores. Hallazgo: con otro nombre de etiqueta (`<my-comments>`) el componente se veía sin estilos, porque las variables `--atproto-*` y el `display: block` de la hoja de estilos iban en el selector de etiqueta `atproto-comments`. Se arregla en las tareas 1.5–1.7
+- [x] 6.3 Subir la versión a 1.3.0 en `package.json`, `package-lock.json` (raíz y `packages[""]`) y `deno.json`, cambiar los pins del README y fechar la sección del CHANGELOG como `[1.3.0]`. Verificar que `npm run check:versions` pasa y que `node scripts/check-versions.js --tag v1.3.0` también
 
 ## Workflow follow-up
 
