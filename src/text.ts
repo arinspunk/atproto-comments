@@ -6,10 +6,15 @@
 
 import type { PostRecord } from "./types.ts";
 
-/** A run of post text, linked when `href` is set. */
+/**
+ * A run of post text: a link when `href` is set, a mention of `mention` (a DID)
+ * when that is set, plain text otherwise. Mentions carry no URL because they
+ * open in the visitor's preferred app.
+ */
 export interface TextSegment {
   text: string;
   href?: string;
+  mention?: string;
 }
 
 /**
@@ -21,7 +26,7 @@ export function facetSegments(record: PostRecord): TextSegment[] {
   const facets = record.facets ?? [];
   const bytes = new TextEncoder().encode(text);
 
-  const links: Array<{ start: number; end: number; uri: string }> = [];
+  const links: Array<{ start: number; end: number; uri?: string; mention?: string }> = [];
   for (const facet of facets) {
     for (const feature of facet.features ?? []) {
       if (feature.$type === "app.bsky.richtext.facet#link" && "uri" in feature) {
@@ -30,11 +35,7 @@ export function facetSegments(record: PostRecord): TextSegment[] {
           links.push({ start: facet.index.byteStart, end: facet.index.byteEnd, uri });
         }
       } else if (feature.$type === "app.bsky.richtext.facet#mention" && "did" in feature) {
-        links.push({
-          start: facet.index.byteStart,
-          end: facet.index.byteEnd,
-          uri: `https://bsky.app/profile/${feature.did}`,
-        });
+        links.push({ start: facet.index.byteStart, end: facet.index.byteEnd, mention: feature.did });
       } else if (feature.$type === "app.bsky.richtext.facet#tag" && "tag" in feature) {
         links.push({
           start: facet.index.byteStart,
@@ -55,7 +56,8 @@ export function facetSegments(record: PostRecord): TextSegment[] {
     if (link.start > pos) {
       segments.push({ text: decoder.decode(bytes.slice(pos, link.start)) });
     }
-    segments.push({ text: decoder.decode(bytes.slice(link.start, link.end)), href: link.uri });
+    const run = decoder.decode(bytes.slice(link.start, link.end));
+    segments.push(link.mention === undefined ? { text: run, href: link.uri } : { text: run, mention: link.mention });
     pos = link.end;
   }
   if (pos < bytes.length) {

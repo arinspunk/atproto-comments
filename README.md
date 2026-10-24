@@ -73,7 +73,7 @@ async function toAtUri(postUrl) {
 
 ### CDN
 
-See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.3.0`) to update only when you choose.
+See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.4.0`) to update only when you choose.
 
 Without `type="module"`, load `dist/index.umd.js` instead. It registers the element the same way:
 
@@ -97,13 +97,13 @@ The package includes TypeScript types for `AtprotoComments`, `StringKey` and `Ui
 ### JSR (Deno)
 
 ```ts
-import 'jsr:@arinspunk/atproto-comments@1.3.0';
+import 'jsr:@arinspunk/atproto-comments@1.4.0';
 ```
 
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
 
 ```html
-<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.3.0/src/atproto-comments.css">
+<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.4.0/src/atproto-comments.css">
 ```
 
 Or, in a static site generator, download it at build time. For example, in Lume:
@@ -111,7 +111,7 @@ Or, in a static site generator, download it at build time. For example, in Lume:
 ```ts
 site.remoteFile(
   "vendor/atproto-comments.css",
-  "https://jsr.io/@arinspunk/atproto-comments/1.3.0/src/atproto-comments.css",
+  "https://jsr.io/@arinspunk/atproto-comments/1.4.0/src/atproto-comments.css",
 );
 site.copy("vendor/atproto-comments.css");
 ```
@@ -142,9 +142,9 @@ Content you put inside the element yourself is kept; the component only replaces
 
 ## What is shown
 
-- Replies are listed oldest first, nested up to `max-depth` levels. When a reply has more replies than were loaded, a **View more on Bluesky** link appears under it.
-- Dates are shown as relative time (`5 m`, `3 d`). The full date and time appear on hover.
-- Links, mentions and hashtags in the text are clickable. Mentions and hashtags open on bsky.app.
+- Replies are listed oldest first, nested up to `max-depth` levels. When a reply has more replies than were loaded, a **View more replies** link appears under it.
+- Dates are shown as relative time (`5 m`, `3 d`), and replies more than a year old show the short date in the page's language (`1/2/20` in `en-US`, `02/01/20` in `pt-PT`). The full date and time appear on hover.
+- Links, mentions and hashtags in the text are clickable. Mentions and **View more replies** open in the app the visitor chose in the app picker, or on bsky.app if they haven't chosen one. Hashtags always open on bsky.app, since other apps may not have hashtag pages.
 - The anchor post itself is not shown, only its replies.
 - If the post has no replies, does not exist or is blocked, only the **Comment** button is shown. If the replies can't be loaded, an error message appears instead.
 
@@ -153,7 +153,11 @@ Content you put inside the element yourself is kept; the component only replaces
 Replies are hidden, together with their own replies, when they:
 
 - are blocked or no longer exist;
-- carry one of these labels: `!hide`, `!no-promote`, `porn`, `sexual`, `nudity`, `graphic-media`.
+- were hidden by the thread's author in Bluesky (threadgate `hiddenReplies`);
+- carry one of these labels: `!hide`, `!no-promote`, `porn`, `sexual`, `nudity`, `graphic-media`;
+- are written by an account that carries one of those labels. Labels on the author's profile record (avatar, banner) don't hide their replies.
+
+If every reply is hidden, only the **Comment** button is shown.
 
 ## UI strings
 
@@ -194,9 +198,11 @@ Invalid JSON, unknown keys and non-string values are ignored.
 | `replyTo` | `Reply to {name}` | Accessible label of the reply button; `{name}` is the author |
 | `otherApp` | `Other app` | Separator in the app picker |
 | `inputPlaceholder` | `app.example` | Placeholder of the custom app domain input |
+| `go` | `Open` | Accessible name of the `→` button that opens the custom app domain |
 | `invalidDomain` | `Invalid domain` | Message shown when the custom app domain is not valid |
 | `error` | `Comments couldn't be loaded.` | Load error message |
-| `viewMore` | `View more on Bluesky` | Link when a reply has unloaded replies |
+| `viewMore` | `View more replies` | Link when a reply has unloaded replies; opens in the visitor's chosen app |
+| `unknownAuthor` | `Unknown` | Name shown for an author with no display name or handle |
 | `now` | `now` | Relative time under one minute |
 | `minutes` | `m` | Relative time unit, shown as `5 m` |
 | `hours` | `h` | Relative time unit |
@@ -248,12 +254,24 @@ The default border and surface colors are meant for light backgrounds. The app p
 }
 ```
 
+### Loading state
+
+While the replies load, the element has `aria-busy="true"` and the class `atproto-comments--loading`. The component shows no loading text of its own; use the class to show a placeholder if you want one:
+
+```css
+atproto-comments.atproto-comments--loading {
+  min-height: 6rem;
+  background: var(--atproto-color-surface);
+}
+```
+
 ### Markup
 
 For full CSS overrides, this is the structure the component generates:
 
 ```html
-<atproto-comments class="atproto-comments">   <!-- the class is added on connect -->
+<atproto-comments class="atproto-comments">   <!-- the class is added on connect; while loading, also
+                                                  atproto-comments--loading and aria-busy="true" -->
   <ol class="atproto-comments__list">
     <li>
       <article class="atproto-reply">
@@ -290,7 +308,7 @@ For full CSS overrides, this is the structure the component generates:
       <div class="atproto-app-popover__separator">Other app</div>
       <div class="atproto-app-popover__custom">
         <input class="atproto-app-popover__input">
-        <button class="atproto-app-popover__go">→</button>
+        <button class="atproto-app-popover__go" aria-label="Open"><span aria-hidden="true">→</span></button>
       </div>
     </div>
   </div>

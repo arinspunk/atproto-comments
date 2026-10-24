@@ -20,7 +20,7 @@ const HERE = resolve(fileURLToPath(import.meta.url), "..");
 const ENGINES = { chromium, webkit };
 const list = (v, all) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : all);
 const BROWSERS = list(process.env.BROWSERS, ["chromium", "webkit"]);
-const SUITES = list(process.env.ONLY, ["lifecycle", "picker", "entrypoints", "svelte"]);
+const SUITES = list(process.env.ONLY, ["lifecycle", "picker", "entrypoints", "preference", "details", "svelte"]);
 
 if (!existsSync(resolve(DIST, "element.js"))) {
   console.error("dist/ is missing: run `npm run build` first (or `npm run test:browser`).");

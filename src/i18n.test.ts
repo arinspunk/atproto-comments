@@ -71,3 +71,20 @@ Deno.test("resolveLocale keeps valid tags and falls back otherwise", () => {
   assertEquals(resolveLocale("", "pt"), "pt");
   assertEquals(resolveLocale(null, "pt"), "pt");
 });
+
+Deno.test("bundled dictionaries have the go and unknownAuthor keys", () => {
+  assertEquals([I18N.en.go, I18N.pt.go], ["Open", "Abrir"]);
+  assertEquals([I18N.en.unknownAuthor, I18N.pt.unknownAuthor], ["Unknown", "Desconhecido"]);
+});
+
+Deno.test("viewMore names no app", () => {
+  assertEquals([I18N.en.viewMore, I18N.pt.viewMore], ["View more replies", "Ver mais respostas"]);
+});
+
+Deno.test("bundled dictionaries have the same keys", () => {
+  assertEquals(Object.keys(I18N.pt).sort(), Object.keys(I18N.en).sort());
+});
+
+Deno.test("parseStringsAttr accepts the new keys", () => {
+  assertEquals(parseStringsAttr('{"go":"Ir","unknownAuthor":"Anónimo"}'), { go: "Ir", unknownAuthor: "Anónimo" });
+});

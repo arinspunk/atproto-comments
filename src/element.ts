@@ -23,10 +23,11 @@ import {
 } from "./i18n.ts";
 
 import { bylineParts } from "./byline.ts";
+import { formatAbsoluteDate, formatRelativeTime, isValidDate } from "./date.ts";
 import { createScheduler, dataKey, isInvalidKey, nextStep } from "./lifecycle.ts";
 import { readPref, writePref } from "./pref.ts";
 import { facetSegments, getInitials, normalizeDomain } from "./text.ts";
-import { hiddenUris, isHiddenByLabel, sortedReplies } from "./thread.ts";
+import { hiddenUris, isReplyHidden, sortedReplies } from "./thread.ts";
 import type { PostRecord, ProfileViewBasic, ThreadViewPost } from "./types.ts";
 
 export type { StringKey, UiStrings } from "./i18n.ts";
@@ -55,44 +56,40 @@ function supportsPopover(): boolean {
   return (popoverSupport ??= "popover" in HTMLElement.prototype);
 }
 
-// --- Pure utilities ---
+/** Paths of the links that open in the visitor's preferred app. */
+const appLinks = new WeakMap<HTMLAnchorElement, string>();
 
-function isValidDate(iso: string | undefined): iso is string {
-  if (!iso) return false;
-  return !Number.isNaN(new Date(iso).getTime());
+function appBase(): string {
+  return `https://${readPref() ?? "bsky.app"}`;
 }
 
-function formatRelativeTime(iso: string, loc: Loc): string {
-  if (!isValidDate(iso)) return "";
-  const t = (k: StringKey) => translate(loc.strings, k);
-  const delta = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (delta < 60) return t("now");
-  if (delta < 3600) return `${Math.floor(delta / 60)} ${t("minutes")}`;
-  if (delta < 86400) return `${Math.floor(delta / 3600)} ${t("hours")}`;
-  if (delta < 2592000) return `${Math.floor(delta / 86400)} ${t("days")}`;
-  if (delta < 31536000) return `${Math.floor(delta / 2592000)} ${t("months")}`;
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+/** Points `a` at `path` in the preferred app, and keeps it up to date (see refreshAppLink). */
+function setAppLink(a: HTMLAnchorElement, path: string): void {
+  appLinks.set(a, path);
+  a.href = appBase() + path;
 }
 
-function formatAbsoluteDate(iso: string, loc: Loc): string {
-  if (!isValidDate(iso)) return "";
-  try {
-    return new Intl.DateTimeFormat(loc.locale, { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+/**
+ * Re-resolves a preferred-app link right before it is used, since the visitor
+ * may have picked another app after it was rendered. Runs on pointerdown (click,
+ * middle click, context menu), focusin (keyboard) and click.
+ */
+function refreshAppLink(e: Event): void {
+  const a = e.target instanceof Element ? e.target.closest("a") : null;
+  const path = a ? appLinks.get(a) : undefined;
+  if (a && path) a.href = appBase() + path;
 }
 
 function buildFacetedText(record: PostRecord): DocumentFragment {
   const fragment = document.createDocumentFragment();
   for (const segment of facetSegments(record)) {
-    if (segment.href === undefined) {
+    if (segment.href === undefined && segment.mention === undefined) {
       fragment.appendChild(document.createTextNode(segment.text));
       continue;
     }
     const a = document.createElement("a");
-    a.href = segment.href;
+    if (segment.mention !== undefined) setAppLink(a, `/profile/${segment.mention}`);
+    else a.href = segment.href!;
     a.rel = "noopener noreferrer";
     a.target = "_blank";
     a.textContent = segment.text;
@@ -192,8 +189,13 @@ function buildAppPopover(
 
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.textContent = "→";
   btn.className = "atproto-app-popover__go";
+  btn.setAttribute("aria-label", t("go"));
+  // The arrow is decoration; the button's name comes from `go`.
+  const arrow = document.createElement("span");
+  arrow.setAttribute("aria-hidden", "true");
+  arrow.textContent = "→";
+  btn.appendChild(arrow);
 
   function clearInvalid() {
     input.setCustomValidity("");
@@ -231,7 +233,6 @@ function buildAppButton(label: string, popoverId: string, extraClass?: string, a
   const btn = document.createElement("button");
   btn.type = "button";
   btn.setAttribute(supportsPopover() ? "popovertarget" : "aria-controls", popoverId);
-  btn.setAttribute("aria-haspopup", "true");
   btn.setAttribute("aria-expanded", "false");
   btn.className = "atproto-app-btn" + (extraClass ? ` ${extraClass}` : "");
   btn.textContent = label;
@@ -362,10 +363,8 @@ function renderError(loc: Loc): HTMLElement {
 }
 
 function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLElement | null {
-  if (view.$type === "app.bsky.feed.defs#blockedPost") return null;
   if (view.$type !== "app.bsky.feed.defs#threadViewPost") return null;
-  if (hidden.has(view.post?.uri ?? "")) return null;
-  if (isHiddenByLabel(view.post?.labels)) return null;
+  if (isReplyHidden(view.post, hidden)) return null;
 
   const post = view.post ?? {};
   const author = post.author ?? {};
@@ -384,7 +383,7 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   const header = document.createElement("header");
   header.className = "atproto-reply__header";
 
-  const parts = bylineParts(author);
+  const parts = bylineParts(author, translate(loc.strings, "unknownAuthor"));
   const byline = document.createElement("span");
   byline.className = "atproto-reply__byline";
 
@@ -406,8 +405,8 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
     const time = document.createElement("time");
     time.className = "atproto-reply__time";
     time.dateTime = record.createdAt;
-    time.textContent = formatRelativeTime(record.createdAt, loc);
-    time.title = formatAbsoluteDate(record.createdAt, loc);
+    time.textContent = formatRelativeTime(record.createdAt, loc.strings, loc.locale);
+    time.title = formatAbsoluteDate(record.createdAt, loc.locale);
     header.appendChild(time);
   }
 
@@ -427,7 +426,7 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   if ((post.replyCount ?? 0) > loadedReplies.length) {
     const more = document.createElement("a");
     more.className = "atproto-reply__more";
-    more.href = `https://bsky.app/profile/${authorDid}/post/${replyRkey}`;
+    setAppLink(more, `/profile/${authorDid}/post/${replyRkey}`);
     more.target = "_blank";
     more.rel = "noopener noreferrer";
     more.textContent = translate(loc.strings, "viewMore");
@@ -436,17 +435,15 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
 
   item.appendChild(content);
 
-  const subReplies = sortedReplies(view.replies);
-  if (subReplies.length > 0) {
-    const subList = document.createElement("ol");
-    subList.className = "atproto-reply__replies";
-    for (const sub of subReplies) {
-      const child = renderReply(sub, hidden, loc);
-      if (child) subList.appendChild(child);
-    }
-    if (subList.lastElementChild) {
-      subList.lastElementChild.classList.add("atproto-reply__item--last");
-    }
+  const subList = document.createElement("ol");
+  subList.className = "atproto-reply__replies";
+  for (const sub of sortedReplies(view.replies)) {
+    const child = renderReply(sub, hidden, loc);
+    if (child) subList.appendChild(child);
+  }
+  // No empty list when every nested reply is hidden.
+  if (subList.lastElementChild) {
+    subList.lastElementChild.classList.add("atproto-reply__item--last");
     item.appendChild(subList);
   }
 
@@ -485,8 +482,11 @@ function renderThread(result: ThreadResult, loc: Loc): HTMLElement[] {
     const el = renderReply(reply, hidden, loc);
     if (el) list.appendChild(el);
   }
+  // Every reply hidden (threadgate, labels): show the button alone, as with no replies.
+  if (!list.firstElementChild) return [comment()];
   return [list, comment()];
 }
+
 // --- Web Component ---
 
 // Without the DOM (server-side rendering) the class still loads, with an empty base.
@@ -545,6 +545,7 @@ export class AtprotoComments extends Base {
 
   constructor() {
     super();
+    for (const type of ["pointerdown", "focusin", "click"]) this.addEventListener(type, refreshAppLink, true);
     // A value assigned before the element was upgraded shadows the accessor; reapply it.
     if (Object.prototype.hasOwnProperty.call(this, "strings")) {
       const value = (this as { strings?: UiStrings }).strings;
@@ -617,6 +618,14 @@ export class AtprotoComments extends Base {
     this.#controller?.abort();
     this.#controller = null;
     this.#inFlightKey = null;
+    this.#setLoading(false);
+  }
+
+  /** `aria-busy` and the `atproto-comments--loading` class while a request is in flight. */
+  #setLoading(on: boolean): void {
+    this.classList.toggle("atproto-comments--loading", on);
+    if (on) this.setAttribute("aria-busy", "true");
+    else this.removeAttribute("aria-busy");
   }
 
   #load(key: string, threadUri: string | null): void {
@@ -634,6 +643,7 @@ export class AtprotoComments extends Base {
     const controller = new AbortController();
     this.#controller = controller;
     this.#inFlightKey = key;
+    this.#setLoading(true);
     // The previous thread's buttons would open the wrong post while this one loads.
     if (this.#loadedKey !== null && key !== this.#loadedKey) {
       this.#removeNodes();
@@ -664,6 +674,7 @@ export class AtprotoComments extends Base {
 
     this.#controller = null;
     this.#inFlightKey = null;
+    this.#setLoading(false);
     this.#data = result;
     this.#loadedKey = key;
     this.#render();

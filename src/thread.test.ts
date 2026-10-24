@@ -1,6 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@^1.0.0";
-import { hiddenUris, isHiddenByLabel, sortedReplies } from "./thread.ts";
-import type { ThreadViewPost } from "./types.ts";
+import { hiddenUris, isHiddenByLabel, isReplyHidden, sortedReplies } from "./thread.ts";
+import type { PostView, ThreadViewPost } from "./types.ts";
 
 const POST = "app.bsky.feed.defs#threadViewPost";
 
@@ -60,4 +60,44 @@ Deno.test("hiddenUris keeps only string entries", () => {
   const uri = "at://did:plc:x/app.bsky.feed.post/abc";
   assertEquals(hiddenUris(root([{ uri: "at://legacy" }, 42, null, "", uri])), new Set([uri]));
   assertEquals(hiddenUris({ $type: POST, threadgate: { record: { hiddenReplies: "nope" as unknown as unknown[] } } }), new Set());
+});
+
+const DID = "did:plc:author";
+const URI = `at://${DID}/app.bsky.feed.post/r1`;
+const post = (fields: Partial<PostView> = {}, author: PostView["author"] = { did: DID }): PostView => ({
+  uri: URI,
+  author,
+  ...fields,
+});
+const none = new Set<string>();
+
+Deno.test("isReplyHidden hides a reply hidden in the threadgate", () => {
+  assertEquals(isReplyHidden(post(), new Set([URI])), true);
+});
+
+Deno.test("isReplyHidden hides a reply with a hiding label on the post", () => {
+  assertEquals(isReplyHidden(post({ labels: [{ val: "porn" }] }), none), true);
+});
+
+Deno.test("isReplyHidden hides a reply whose author's account has a hiding label", () => {
+  assertEquals(isReplyHidden(post({}, { did: DID, labels: [{ val: "!hide", uri: DID }] }), none), true);
+});
+
+Deno.test("isReplyHidden ignores hiding labels on the author's profile record", () => {
+  const profile = `at://${DID}/app.bsky.actor.profile/self`;
+  assertEquals(isReplyHidden(post({}, { did: DID, labels: [{ val: "nudity", uri: profile }] }), none), false);
+});
+
+Deno.test("isReplyHidden ignores account labels of another DID", () => {
+  assertEquals(isReplyHidden(post({}, { did: DID, labels: [{ val: "!hide", uri: "did:plc:other" }] }), none), false);
+});
+
+Deno.test("isReplyHidden ignores author labels when the author has no DID", () => {
+  assertEquals(isReplyHidden(post({}, { labels: [{ val: "!hide", uri: DID }] }), none), false);
+});
+
+Deno.test("isReplyHidden keeps replies whose author has only non-hiding labels or none", () => {
+  assertEquals(isReplyHidden(post({}, { did: DID, labels: [{ val: "bot", uri: DID }] }), none), false);
+  assertEquals(isReplyHidden(post(), none), false);
+  assertEquals(isReplyHidden(undefined, none), false);
 });

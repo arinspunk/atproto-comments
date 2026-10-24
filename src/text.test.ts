@@ -47,7 +47,7 @@ Deno.test("facetSegments uses byte offsets with emojis and accents", () => {
   });
   assertEquals(segments, [
     { text: "Olá 👋🏽 " },
-    { text: "@xulioze.com", href: "https://bsky.app/profile/did:plc:x" },
+    { text: "@xulioze.com", mention: "did:plc:x" },
     { text: ", mira " },
     { text: "https://ex.example", href: "https://ex.example" },
     { text: " ✨ " },

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="atproto-comments.css"><script src="check.js"></script></head>
+<body style="font-family: system-ui, sans-serif; padding: 0 16px">
+<p><a href="./">← all checks</a></p><h1 id="r">…</h1><pre id="errors" style="color:#b00"></pre>
+<p>Preferred app now: <b id="pref"></b> <button id="clear" type="button">clear</button></p>
+<ol>
+  <li>With no preferred app, <b>@bsky.app</b> and <b>View more replies</b> open on bsky.app.</li>
+  <li>Open the picker with <b>Comment</b> and choose Deer (a tab opens; close it). Without reloading, <b>@bsky.app</b> and <b>View more replies</b> now open on deer.social.</li>
+  <li><b>#atproto</b> always opens on bsky.app.</li>
+  <li>With VoiceOver: the <b>→</b> button in the picker reads "Open", and <b>Comment</b> is not announced as a menu.</li>
+</ol>
+<atproto-comments thread-uri="at://did:plc:test/app.bsky.feed.post/links"></atproto-comments>
+<script>
+  const show = () => {
+    let v = null;
+    try { v = localStorage.getItem("atproto-preferred-app"); } catch {}
+    document.getElementById("pref").textContent = v ?? "none";
+  };
+  show();
+  addEventListener("focus", show);
+  addEventListener("pointerdown", () => setTimeout(show, 300));
+  document.getElementById("clear").onclick = () => { try { localStorage.removeItem("atproto-preferred-app"); } catch {} show(); };
+  report(() => [calls === 1 && lists("atproto-comments") === 1, `${calls} request(s), ${lists("atproto-comments")} list(s)`]);
+</script>
+<script type="module" src="index.js"></script>
+</body>
+</html>
