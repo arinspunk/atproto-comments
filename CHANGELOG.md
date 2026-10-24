@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/): new attributes, properties, `strings` keys, CSS custom properties or classes are minor releases.
 
+## [1.2.0] - 2026-10-24
+
+### Changed
+
+- Attributes and the `strings` property now apply when they change after the element is inserted. Changing `thread-uri`, `appview` or `max-depth` loads the thread again; changing `lang` or `strings` re-renders without a new request. Before, they were read once, when the element connected.
+- The `strings` property can be set before or after the element is inserted. Assign a new object to change it: changing a key of the current object does not update the UI.
+- Each render replaces only what the component rendered before. Content you put inside the element is kept.
+- When `thread-uri` changes, the previous thread is removed as soon as the new request starts, so its buttons no longer open the previous post while the new one loads.
+
+### Fixed
+
+- Moving the element in the page (reordering, frameworks that move nodes) no longer shows the thread twice or makes another request.
+- A request still in flight is cancelled when the element is removed or its thread changes, and only the latest request is shown. Before, a late response could be added to an element that was no longer in the page, or next to the new thread.
+
 ## [1.1.3] - 2026-10-24
 
 ### Fixed
