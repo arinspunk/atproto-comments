@@ -31,13 +31,17 @@
 ## 6. Verificación integrada
 
 - [x] 6.1 Ejecutar `npx tsc --noEmit`, `deno task check`, `deno task test` y `npm run build` y verificar que pasan sin errores
-- [ ] 6.2 En iOS 16 (sin Popover API) y en iOS 17 o posterior, ambos con VoiceOver, verificar que un dominio inválido muestra el mensaje y VoiceOver lo anuncia, y que el campo se anuncia como "Other app". Si falla en alguno, sacar 5.2 y 5.3 de este change hacia `app-preference-consistency` (design, riesgos) antes de publicar
+- [x] 6.2 En iOS 16 (sin Popover API), con VoiceOver, verificar que un dominio inválido muestra el mensaje y VoiceOver lo anuncia, y que el campo se anuncia como "Other app". Si falla, sacar 5.2 y 5.3 de este change hacia `app-preference-consistency` (design, riesgos) antes de publicar. Resultado: correcto en iOS 16.7.16. iOS 17 o posterior queda sin probar por falta de dispositivo; el riesgo es bajo porque la validación usa el mismo motor WebKit y, con popover nativo, el globo se ve por encima del panel en Safari de escritorio
 - [x] 6.3 En Firefox ESR 115, o en un Firefox con `Intl.Segmenter` eliminado antes de cargar el módulo, verificar que un hilo con autores sin avatar se renderiza con sus iniciales
 - [x] 6.4 En Chrome y Safari de escritorio con Popover API, verificar que no hay regresiones en el selector (abrir, elegir app, cerrar fuera y con Escape, preferida resaltada) ni en el texto con facets
 
 ## 7. Versión 1.1.3
 
 - [x] 7.1 Subir la versión a 1.1.3 en `package.json`, `package-lock.json` (raíz y `packages[""]`) y `deno.json`, y cambiar todos los `1.1.2` del README (los tres pins de JSR y la frase sobre la versión exacta). Verificar que `grep -rn "1\.1\.2" package.json package-lock.json deno.json README.md` no da resultados
+
+## 8. Tamaño de texto de la cabecera (reply-rendering)
+
+- [x] 8.1 Poner `font-size: var(--atproto-font-size)` en `.atproto-reply__header` y quitarlo de `.atproto-reply__handle` y `.atproto-reply__time`. Verificar en Chrome, sobre una página con texto base de 16 px, que el nombre, el handle y la fecha se calculan a 14 px (antes el nombre salía a 16 px), y que la captura de la cabecera solo cambia en el tamaño del nombre
 
 ## Workflow follow-up
 

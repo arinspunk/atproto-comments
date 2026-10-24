@@ -36,3 +36,14 @@ Cuando un autor no tiene avatar o su imagen no carga, el componente SHALL mostra
 #### Scenario: Sin texto del que sacar iniciales
 - **WHEN** el autor no tiene nombre visible ni handle
 - **THEN** el avatar provisional muestra `?`
+
+### Requirement: Nombre, handle y fecha con el mismo tamaño de texto
+En la cabecera de cada respuesta, el nombre del autor, su handle y la fecha SHALL mostrarse con el mismo tamaño de texto, el definido por `--atproto-font-size`, sea cual sea el tamaño de texto de la página. El nombre SHALL distinguirse solo por el peso de la fuente.
+
+#### Scenario: Página con texto de 16 px
+- **WHEN** el componente se muestra en una página cuyo texto base es de 16 px y `--atproto-font-size` tiene su valor por defecto
+- **THEN** el nombre, el handle y la fecha se muestran a 14 px (0.875rem)
+
+#### Scenario: Tamaño personalizado
+- **WHEN** el integrador define `--atproto-font-size: 1rem`
+- **THEN** el nombre, el handle y la fecha se muestran a ese tamaño

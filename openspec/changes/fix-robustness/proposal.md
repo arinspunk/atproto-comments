@@ -19,6 +19,7 @@ El primer fallo rompe la moderación del autor. Por eso conviene sacar ya un par
 - Las iniciales del avatar provisional se calculan sin `Intl.Segmenter` cuando el navegador no lo tiene.
 - El campo «Otra app» usa la cadena `otherApp` como nombre accesible. Un dominio inválido se comunica con la validación nativa del navegador, usando la cadena `invalidDomain`.
 - Las funciones puras (`hiddenUris`, `getInitials`, `normalizeDomain`, `isHiddenByLabel`, `sortedReplies` y el cálculo de rangos de las facets) pasan a módulos sin DOM con tests en Deno, y `deno task test` se ejecuta en `ci.yml` y en `release.yml` antes de publicar.
+- El nombre del autor en la cabecera de cada respuesta pasa a tener el mismo tamaño que el handle y la fecha (`--atproto-font-size`). Hasta ahora heredaba el tamaño de texto de la página y salía más grande. Quien haya fijado el tamaño de `.atproto-reply__author` en su CSS no nota el cambio.
 - README: `invalidDomain` deja de figurar como reservada y la tabla de compatibilidad ya no dice que el render falla sin `Intl.Segmenter`.
 - Versión de parche (1.1.3). No se añaden ni cambian atributos, propiedades, claves de `strings`, variables CSS ni clases.
 
@@ -33,13 +34,14 @@ Quedan fuera de este change:
 ### New Capabilities
 
 ### Modified Capabilities
-- `reply-rendering`: se añade que las respuestas ocultadas en el threadgate no se muestran y que el avatar provisional se renderiza en navegadores sin `Intl.Segmenter`.
+- `reply-rendering`: se añade que las respuestas ocultadas en el threadgate no se muestran, que el avatar provisional se renderiza en navegadores sin `Intl.Segmenter` y que nombre, handle y fecha comparten tamaño de texto.
 - `app-chooser`: el escenario «Dominio inválido» exige mostrar y anunciar el mensaje de dominio inválido, el campo «Otra app» exige un nombre accesible, y la preferencia recordada admite que el almacenamiento no esté disponible.
 
 ## Impact
 
 - `src/index.ts`: `Threadgate` (desaparece `HiddenReply`), accesos a `localStorage` en `buildAppPopover` y `buildAppAction`, el input y `openCustom` en `buildAppPopover`, e imports de los módulos nuevos.
 - Módulos nuevos sin DOM en `src/` (p. ej. `text.ts`, `thread.ts`) con sus `*.test.ts`.
+- `src/atproto-comments.css`: tamaño de texto en `.atproto-reply__header`.
 - `.github/workflows/ci.yml` y `.github/workflows/release.yml`: instalar Deno y ejecutar `deno task test`.
 - `README.md`: fila de `invalidDomain` en la tabla de cadenas y fila de `Intl.Segmenter` en la de compatibilidad.
 - `package.json`, `package-lock.json`, `deno.json` y los pins de versión del README pasan a 1.1.3 al publicar.
