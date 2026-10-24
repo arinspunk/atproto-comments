@@ -17,10 +17,17 @@ jobs:
           node-version: 22
           cache: npm
 
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - run: npm ci
 
       - name: Typecheck
         run: npx tsc --noEmit
+
+      - name: Test
+        run: deno task test
 
       - name: Build
         run: node scripts/build.js

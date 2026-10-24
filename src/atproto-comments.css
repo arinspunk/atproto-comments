@@ -118,6 +118,8 @@ atproto-comments {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0 0.25rem;
+  /* Name, handle and time share one size; the name stands out by weight only. */
+  font-size: var(--atproto-font-size);
 }
 
 /* Name and handle share one flex item so the space between them is rendered
@@ -130,7 +132,6 @@ atproto-comments {
 .atproto-reply__handle,
 .atproto-reply__time {
   color: var(--atproto-color-muted);
-  font-size: var(--atproto-font-size);
 }
 
 .atproto-reply__time::before {
