@@ -25,15 +25,15 @@
 ## 5. Campo «Otra app» accesible (app-chooser)
 
 - [x] 5.1 En `buildAppPopover`, poner `aria-label` con `t("otherApp")` en el input y `inputMode = "url"`, `autocapitalize = "off"`, `autocomplete = "off"` y `spellcheck = false`. Verificar en el árbol de accesibilidad de DevTools que el nombre del campo es "Other app" en inglés y "Outra app" con `lang="pt"`
-- [ ] 5.2 En `openCustom`, implementar la validación nativa según el diagrama de la decisión 6 del design (limpiar la validez primero, `setCustomValidity(t("invalidDomain"))` + `reportValidity()` si es inválido, limpiar en el evento `input`). Verificar en Chrome, Firefox y Safari de escritorio, con popover nativo y con el modo de respaldo forzado, que un dominio inválido muestra el globo con "Invalid domain" por encima del panel, que el panel sigue abierto y que corregirlo y enviarlo abre el post
+- [x] 5.2 En `openCustom`, implementar la validación nativa según el diagrama de la decisión 6 del design (limpiar la validez primero, `setCustomValidity(t("invalidDomain"))` + `reportValidity()` si es inválido, limpiar en el evento `input`). Verificar en Chrome, Firefox y Safari de escritorio, con popover nativo y con el modo de respaldo forzado, que un dominio inválido muestra el globo con "Invalid domain" por encima del panel, que el panel sigue abierto y que corregirlo y enviarlo abre el post
 - [x] 5.3 Cambiar la descripción de `invalidDomain` en la tabla de cadenas de `README.md` («Reserved for custom domain validation») por su uso real: el mensaje que se muestra al enviar un dominio inválido en «Otra app». Verificar que no queda ninguna mención a «Reserved»
 
 ## 6. Verificación integrada
 
-- [ ] 6.1 Ejecutar `npx tsc --noEmit`, `deno task check`, `deno task test` y `npm run build` y verificar que pasan sin errores
+- [x] 6.1 Ejecutar `npx tsc --noEmit`, `deno task check`, `deno task test` y `npm run build` y verificar que pasan sin errores
 - [ ] 6.2 En iOS 16 (sin Popover API) y en iOS 17 o posterior, ambos con VoiceOver, verificar que un dominio inválido muestra el mensaje y VoiceOver lo anuncia, y que el campo se anuncia como "Other app". Si falla en alguno, sacar 5.2 y 5.3 de este change hacia `app-preference-consistency` (design, riesgos) antes de publicar
-- [ ] 6.3 En Firefox ESR 115, o en un Firefox con `Intl.Segmenter` eliminado antes de cargar el módulo, verificar que un hilo con autores sin avatar se renderiza con sus iniciales
-- [ ] 6.4 En Chrome y Safari de escritorio con Popover API, verificar que no hay regresiones en el selector (abrir, elegir app, cerrar fuera y con Escape, preferida resaltada) ni en el texto con facets
+- [x] 6.3 En Firefox ESR 115, o en un Firefox con `Intl.Segmenter` eliminado antes de cargar el módulo, verificar que un hilo con autores sin avatar se renderiza con sus iniciales
+- [x] 6.4 En Chrome y Safari de escritorio con Popover API, verificar que no hay regresiones en el selector (abrir, elegir app, cerrar fuera y con Escape, preferida resaltada) ni en el texto con facets
 
 ## 7. Versión 1.1.3
 
