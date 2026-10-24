@@ -40,7 +40,7 @@
 ## 5. Verificación integrada y versión
 
 - [x] 5.1 Ejecutar `npx tsc --noEmit`, `deno task check`, `deno task test`, `npm run build`, `npm run check:versions`, `npm run test:browser` y `deno publish --dry-run --allow-dirty`, y verificar que pasan
-- [ ] 5.2 En Firefox y Safari de escritorio y en iOS 16, verificar a mano con `tests/browser/server.mjs` que elegir una app en el selector hace que la siguiente mención, el siguiente hashtag y «View more» abran en ella (con Deer, confirmar que `deer.social/hashtag/<tag>` muestra el hashtag), y que VoiceOver anuncia el botón «→» como «Open» y no anuncia el botón de responder como menú
+- [x] 5.2 En Firefox y Safari de escritorio y en iOS 16, verificar a mano con `tests/browser/server.mjs` que elegir una app en el selector hace que la siguiente mención, el siguiente hashtag y «View more» abran en ella (con Deer, confirmar que `deer.social/hashtag/<tag>` muestra el hashtag), y que VoiceOver anuncia el botón «→» como «Open» y no anuncia el botón de responder como menú. Resultado: correcto en Firefox y Safari de escritorio y en iOS 16 con VoiceOver; deer.social muestra el hashtag
 - [x] 5.3 Subir la versión a 1.4.0 en `package.json`, `package-lock.json` (raíz y `packages[""]`), `deno.json` y `tests/browser/package-lock.json`, cambiar los pins del README y fechar la sección del CHANGELOG como `[1.4.0]`. Verificar que `npm run check:versions` y `node scripts/check-versions.js --tag v1.4.0` pasan
 
 ## Workflow follow-up
