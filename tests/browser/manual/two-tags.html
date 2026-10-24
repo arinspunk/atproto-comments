@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="atproto-comments.css"><script src="check.js"></script></head>
+<body style="font-family: system-ui, sans-serif; padding: 0 16px">
+<p><a href="./">← all checks</a></p><h1 id="r">…</h1><pre id="errors" style="color:#b00"></pre>
+<h2>&lt;atproto-comments&gt;</h2>
+<atproto-comments thread-uri="at://did:plc:test/app.bsky.feed.post/A"></atproto-comments>
+<h2>&lt;my-comments&gt;</h2>
+<my-comments thread-uri="at://did:plc:test/app.bsky.feed.post/B"></my-comments>
+<script type="module">
+  import { AtprotoComments } from "./index.js";
+  customElements.define("my-comments", class extends AtprotoComments {});
+</script>
+<script>report(() => {
+  const a = lists("atproto-comments"), b = lists("my-comments");
+  return [a === 1 && b === 1, `atproto-comments: ${a} list(s), my-comments: ${b} list(s)`];
+});</script>
+</body>
+</html>

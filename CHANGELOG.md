@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/): new attributes, properties, `strings` keys, CSS custom properties or classes are minor releases.
 
+## [1.3.0] - 2026-10-24
+
+### Added
+
+- `atproto-comments/element` (JSR: `jsr:@arinspunk/atproto-comments/element`) exports `AtprotoComments` and its types without registering any tag. Use it to register the element under another name only.
+- The npm package includes TypeScript types for both entry points.
+- Importing the package outside the browser (server-side rendering) no longer throws: it registers nothing.
+- The element adds the class `atproto-comments` to itself, and the stylesheet targets it too, so an element registered under another tag name gets the same styles. Before, it rendered unstyled. Overrides written as `atproto-comments { … }` keep the same priority.
+
+### Changed
+
+- The `require` condition is removed from `exports`. It pointed to `dist/index.umd.js`, which is not CommonJS, so `require('atproto-comments')` returned an empty object. Use `import 'atproto-comments'`, or load `dist/index.umd.js` with a classic `<script>`, which still works as before.
+- `dist/index.js` now imports the class from `dist/element.js`, so serve or copy both files together.
+
 ## [1.2.0] - 2026-10-24
 
 ### Changed

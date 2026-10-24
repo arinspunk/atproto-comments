@@ -7,3 +7,7 @@ github-copy/
 
 # Local-only agent skill
 .claude/skills/ci-workflows/
+
+# Browser tests (tests/browser)
+tests/browser/node_modules/
+tests/browser/svelte/dist/

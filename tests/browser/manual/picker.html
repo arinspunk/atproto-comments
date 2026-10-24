@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="atproto-comments.css"><script src="check.js"></script></head>
+<body style="font-family: system-ui, sans-serif; padding: 0 16px">
+<p><a href="./">← all checks</a></p><h1 id="r">…</h1><pre id="errors" style="color:#b00"></pre>
+<p>Popover API: <b id="pop"></b></p>
+<ol>
+  <li>"Comment" and "Reply" open the app picker; it closes on a click outside and with Escape.</li>
+  <li>The app you choose is highlighted when you open the picker again.</li>
+  <li>After "lang → pt", the buttons read "Comentar" and "Responder" and the new picker works the same.</li>
+  <li>No red ERROR lines appear.</li>
+</ol>
+<button id="lang" type="button">lang → pt</button>
+<atproto-comments thread-uri="at://did:plc:test/app.bsky.feed.post/picker" lang="en"></atproto-comments>
+<script>
+  document.getElementById("pop").textContent = "popover" in HTMLElement.prototype ? "yes" : "no (fallback)";
+  document.getElementById("lang").onclick = (e) => {
+    const el = document.querySelector("atproto-comments");
+    const pt = el.getAttribute("lang") === "en";
+    el.setAttribute("lang", pt ? "pt" : "en");
+    e.target.textContent = "lang → " + (pt ? "en" : "pt");
+  };
+  report(() => [calls === 1 && lists("atproto-comments") === 1, `${calls} request(s), ${lists("atproto-comments")} list(s)`]);
+</script>
+<script type="module" src="index.js"></script>
+</body>
+</html>

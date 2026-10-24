@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="atproto-comments.css"><script src="check.js"></script></head>
+<body style="font-family: system-ui, sans-serif; padding: 0 16px">
+<p><a href="./">← all checks</a></p><h1 id="r">…</h1><pre id="errors" style="color:#b00"></pre>
+<my-comments thread-uri="at://did:plc:test/app.bsky.feed.post/A"></my-comments>
+<script type="module">
+  import { AtprotoComments } from "./element.js";
+  customElements.define("my-comments", AtprotoComments);
+</script>
+<script>report(() => {
+  const registered = customElements.get("atproto-comments") !== undefined, n = lists("my-comments");
+  return [!registered && n === 1, `my-comments: ${n} list(s), atproto-comments registered: ${registered}`];
+});</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="atproto-comments.css"><script src="check.js"></script></head>
+<body style="font-family: system-ui, sans-serif; padding: 0 16px">
+<p><a href="./">← all checks</a></p><h1 id="r">…</h1><pre id="errors" style="color:#b00"></pre>
+<atproto-comments thread-uri="at://did:plc:test/app.bsky.feed.post/up" lang="en" max-depth="4" strings='{"comment":"Kommentieren"}'></atproto-comments>
+<script>report(() => [calls === 1 && lists("atproto-comments") === 1, `${calls} request(s), ${lists("atproto-comments")} list(s)`]);</script>
+<script type="module" src="index.js"></script>
+</body>
+</html>

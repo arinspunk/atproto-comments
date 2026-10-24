@@ -1,8 +1,12 @@
 /* atproto-comments — base styles
    Theming: override --atproto-* custom properties to match your site.
-   All structural classes use the .atproto- prefix to avoid collisions. */
+   All structural classes use the .atproto- prefix to avoid collisions.
+   The element also carries the class .atproto-comments, so the styles apply
+   under any tag name. :where() keeps that class at zero specificity, so
+   `atproto-comments { … }` overrides keep winning as before. */
 
-atproto-comments {
+atproto-comments,
+:where(.atproto-comments) {
   --atproto-font-family: system-ui, -apple-system, sans-serif;
   --atproto-font-size: 0.875rem;
   --atproto-color-text: inherit;
