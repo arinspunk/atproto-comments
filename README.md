@@ -73,7 +73,7 @@ async function toAtUri(postUrl) {
 
 ### CDN
 
-See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.1.3`) to update only when you choose.
+See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.2.0`) to update only when you choose.
 
 ### npm
 
@@ -89,13 +89,13 @@ import 'atproto-comments/style.css';
 ### JSR (Deno)
 
 ```ts
-import 'jsr:@arinspunk/atproto-comments@1.1.3';
+import 'jsr:@arinspunk/atproto-comments@1.2.0';
 ```
 
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
 
 ```html
-<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.1.3/src/atproto-comments.css">
+<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.2.0/src/atproto-comments.css">
 ```
 
 Or, in a static site generator, download it at build time. For example, in Lume:
@@ -103,7 +103,7 @@ Or, in a static site generator, download it at build time. For example, in Lume:
 ```ts
 site.remoteFile(
   "vendor/atproto-comments.css",
-  "https://jsr.io/@arinspunk/atproto-comments/1.1.3/src/atproto-comments.css",
+  "https://jsr.io/@arinspunk/atproto-comments/1.2.0/src/atproto-comments.css",
 );
 site.copy("vendor/atproto-comments.css");
 ```
@@ -122,7 +122,13 @@ Always load the script and the stylesheet from the same version, including self-
 | `strings` | No | — | JSON object overriding UI strings by key. See [UI strings](#ui-strings) |
 | `max-depth` | No | `6` | Maximum reply depth to load |
 
-Attributes are read once, when the element is inserted into the document.
+Attributes can change at any time:
+
+- Changing `thread-uri`, `appview` or `max-depth` loads the thread again. The previous thread is removed as soon as the new request starts, and a request still in flight is cancelled.
+- Changing `lang` or `strings` re-renders with the replies already loaded, without a new request.
+- Moving the element to another place in the page keeps what it shows, without a new request.
+
+Content you put inside the element yourself is kept; the component only replaces what it rendered.
 
 ## What is shown
 
@@ -160,7 +166,7 @@ From PHP (e.g. WordPress), let `wp_json_encode` and `esc_attr` handle quoting:
 ></atproto-comments>
 ```
 
-Or set the `strings` property, which takes priority over the attribute key by key. Set it **before** the element is inserted into the document. Strings are read once, when the element connects:
+Or set the `strings` property, which takes priority over the attribute key by key. You can set it before or after the element is inserted. To change the strings later, assign a new object: changing a key of the current object does not update the UI.
 
 ```js
 const el = document.createElement('atproto-comments');

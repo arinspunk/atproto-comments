@@ -22,6 +22,7 @@ import {
 } from "./i18n.ts";
 
 import { bylineParts } from "./byline.ts";
+import { createScheduler, dataKey, isInvalidKey, nextStep } from "./lifecycle.ts";
 import { readPref, writePref } from "./pref.ts";
 import { facetSegments, getInitials, normalizeDomain } from "./text.ts";
 import { hiddenUris, isHiddenByLabel, sortedReplies } from "./thread.ts";
@@ -446,6 +447,40 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   return li;
 }
 
+/** Resolved data for the current `thread-uri`, `appview` and `max-depth`. */
+type ThreadResult =
+  | { kind: "invalid" }
+  | { kind: "error" }
+  | { kind: "thread"; thread: ThreadViewPost | undefined; rootDid: string; rootRkey: string };
+
+function renderThread(result: ThreadResult, loc: Loc): HTMLElement[] {
+  if (result.kind !== "thread") return [renderError(loc)];
+
+  const { thread, rootDid, rootRkey } = result;
+  const commentLabel = translate(loc.strings, "comment");
+  const comment = () => buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl");
+
+  if (
+    !thread ||
+    thread.$type === "app.bsky.feed.defs#notFoundPost" ||
+    thread.$type === "app.bsky.feed.defs#blockedPost"
+  ) {
+    return [comment()];
+  }
+
+  const hidden = hiddenUris(thread);
+  const replies = sortedReplies(thread.replies);
+
+  if (replies.length === 0) return [comment()];
+
+  const list = document.createElement("ol");
+  list.className = "atproto-comments__list";
+  for (const reply of replies) {
+    const el = renderReply(reply, hidden, loc);
+    if (el) list.appendChild(el);
+  }
+  return [list, comment()];
+}
 // --- Web Component ---
 
 /**
@@ -462,9 +497,14 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
  * - `strings` — JSON object overriding UI strings by key, e.g. `{"comment":"Comentar"}`
  * - `max-depth` — maximum reply depth (default: `6`)
  *
+ * Attributes can change at any time. Changing `thread-uri`, `appview` or
+ * `max-depth` loads the thread again; changing `lang` or `strings` re-renders
+ * without a request.
+ *
  * **Properties**
  * - `strings` — same as the attribute, as an object; takes priority over it.
- *   Set it before the element is inserted into the document.
+ *   Can be set at any time. Assign a new object: mutating the current one
+ *   does not re-render.
  *
  * **Theming** via CSS custom properties on the `atproto-comments` selector:
  * `--atproto-font-family`, `--atproto-font-size`, `--atproto-color-text`,
@@ -482,31 +522,49 @@ export class AtprotoComments extends HTMLElement {
   static observedAttributes = ["thread-uri", "appview", "lang", "max-depth", "strings"];
 
   #strings: UiStrings | undefined;
+  #schedule = createScheduler(() => this.#run(), () => this.isConnected);
+  #data: ThreadResult | null = null;
+  #loadedKey: string | null = null;
+  #inFlightKey: string | null = null;
+  #controller: AbortController | null = null;
+  /** `lang` or `strings` changed since the last render. */
+  #viewDirty = false;
+  /** Nodes inserted by the last render; page content inside the element is left alone. */
+  #nodes: Node[] = [];
 
-  /** UI strings overriding the bundled dictionary by key. Read when the element connects. */
-  get strings(): UiStrings | undefined {
-    return this.#strings;
-  }
-
-  set strings(value: UiStrings | undefined) {
-    this.#strings = value;
-  }
-
-  connectedCallback(): void {
+  constructor() {
+    super();
     // A value assigned before the element was upgraded shadows the accessor; reapply it.
     if (Object.prototype.hasOwnProperty.call(this, "strings")) {
       const value = (this as { strings?: UiStrings }).strings;
       delete (this as { strings?: UiStrings }).strings;
       this.strings = value;
     }
+  }
 
-    const loc = this.#loc();
-    const threadUri = this.getAttribute("thread-uri");
-    if (!threadUri || !threadUri.startsWith("at://")) {
-      this.appendChild(renderError(loc));
-      return;
-    }
-    this.#load(threadUri, loc);
+  /** UI strings overriding the bundled dictionary by key. Each assignment re-renders. */
+  get strings(): UiStrings | undefined {
+    return this.#strings;
+  }
+
+  set strings(value: UiStrings | undefined) {
+    this.#strings = value;
+    this.#viewDirty = true;
+    this.#schedule();
+  }
+
+  connectedCallback(): void {
+    this.#schedule();
+  }
+
+  disconnectedCallback(): void {
+    this.#abort();
+  }
+
+  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    if (oldValue === newValue) return;
+    if (name === "lang" || name === "strings") this.#viewDirty = true;
+    this.#schedule();
   }
 
   #loc(): Loc {
@@ -527,51 +585,86 @@ export class AtprotoComments extends HTMLElement {
     return Number.isFinite(v) && v > 0 ? v : DEFAULT_MAX_DEPTH;
   }
 
-  async #load(threadUri: string, loc: Loc): Promise<void> {
+  #run(): void {
+    const threadUri = this.getAttribute("thread-uri");
+    const key = dataKey(threadUri, this.#appview, this.#maxDepth);
+    const step = nextStep({
+      wantedKey: key,
+      loadedKey: this.#loadedKey,
+      inFlightKey: this.#inFlightKey,
+      viewDirty: this.#viewDirty,
+    });
+    if (step === "load") this.#load(key, threadUri);
+    else if (step === "render") this.#render();
+  }
+
+  #abort(): void {
+    this.#controller?.abort();
+    this.#controller = null;
+    this.#inFlightKey = null;
+  }
+
+  #load(key: string, threadUri: string | null): void {
+    this.#abort();
+    if (threadUri === null || isInvalidKey(key)) {
+      this.#data = { kind: "invalid" };
+      this.#loadedKey = key;
+      this.#render();
+      return;
+    }
+    void this.#fetch(key, threadUri);
+  }
+
+  async #fetch(key: string, threadUri: string): Promise<void> {
+    const controller = new AbortController();
+    this.#controller = controller;
+    this.#inFlightKey = key;
+    // The previous thread's buttons would open the wrong post while this one loads.
+    if (this.#loadedKey !== null && key !== this.#loadedKey) {
+      this.#removeNodes();
+      this.#data = null;
+      this.#loadedKey = null;
+    }
+
+    // Only the latest request may write, even if an older one had the same key (A → B → A).
+    const stale = () => controller.signal.aborted || controller !== this.#controller;
+
     const uriParts = threadUri.split("/");
     const rootDid = uriParts[2] ?? "";
     const rootRkey = uriParts[4] ?? "";
-
     const url = `${this.#appview}/xrpc/app.bsky.feed.getPostThread?uri=${encodeURIComponent(threadUri)}&depth=${this.#maxDepth}&parentHeight=0`;
 
-    let data: { thread: ThreadViewPost };
+    let result: ThreadResult;
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
+      if (stale()) return;
       if (!res.ok) throw new Error(`${res.status}`);
-      data = await res.json() as { thread: ThreadViewPost };
+      const data = await res.json() as { thread: ThreadViewPost };
+      if (stale()) return;
+      result = { kind: "thread", thread: data.thread, rootDid, rootRkey };
     } catch {
-      this.appendChild(renderError(loc));
-      return;
+      if (stale()) return;
+      result = { kind: "error" };
     }
 
-    const thread = data.thread;
-    const commentLabel = translate(loc.strings, "comment");
+    this.#controller = null;
+    this.#inFlightKey = null;
+    this.#data = result;
+    this.#loadedKey = key;
+    this.#render();
+  }
 
-    if (
-      !thread ||
-      thread.$type === "app.bsky.feed.defs#notFoundPost" ||
-      thread.$type === "app.bsky.feed.defs#blockedPost"
-    ) {
-      this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl"));
-      return;
-    }
+  #removeNodes(): void {
+    for (const node of this.#nodes) (node as ChildNode).remove();
+    this.#nodes = [];
+  }
 
-    const hidden = hiddenUris(thread);
-    const replies = sortedReplies(thread.replies);
-
-    if (replies.length === 0) {
-      this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl"));
-      return;
-    }
-
-    const list = document.createElement("ol");
-    list.className = "atproto-comments__list";
-    for (const reply of replies) {
-      const el = renderReply(reply, hidden, loc);
-      if (el) list.appendChild(el);
-    }
-    this.appendChild(list);
-    this.appendChild(buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl"));
+  #render(): void {
+    this.#removeNodes();
+    this.#viewDirty = false;
+    if (!this.#data) return;
+    this.#nodes = renderThread(this.#data, this.#loc());
+    this.append(...this.#nodes);
   }
 }
 
