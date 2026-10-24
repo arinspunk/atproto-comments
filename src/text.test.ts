@@ -110,7 +110,7 @@ function withoutSegmenter(fn: () => void): void {
 }
 
 Deno.test("getInitials takes two initials from the display name", () => {
-  assertEquals(getInitials("Xulio Zé", "xulioze.com"), "XX");
+  assertEquals(getInitials("Xulio Zé", "xulioze.com"), "XZ");
   assertEquals(getInitials("élan", undefined), "É");
 });
 
