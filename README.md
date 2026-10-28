@@ -5,6 +5,8 @@
 
 A Web Component that shows the replies to an AT Protocol post (Bluesky, Mu, Deer…) as the comment section of any website. No backend, no database, no login for visitors.
 
+atproto-comments is an independent project. It is not affiliated with or endorsed by AT Protocol or Bluesky.
+
 <!-- TODO: screenshot and link to a live demo -->
 
 ## Quick start
