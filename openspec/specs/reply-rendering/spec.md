@@ -14,12 +14,13 @@ La cabecera de cada respuesta SHALL contener, como texto renderizado, al menos u
 - **THEN** el texto renderizado de la cabecera (`innerText`) contiene "Xulio Zé @xulioze.com", no "Xulio Zé@xulioze.com"
 
 #### Scenario: Autor sin nombre visible
-- **WHEN** se renderiza una respuesta de un autor sin `displayName` con handle `xulioze.com`
+- **WHEN** se renderiza una respuesta de un autor sin `displayName`, o con `displayName` vacío, con handle `xulioze.com`
 - **THEN** el texto renderizado de la cabecera contiene "xulioze.com @xulioze.com", con espacio
 
 #### Scenario: Data Detectors de iOS
-- **WHEN** la respuesta se muestra en Safari o Chrome en iOS
-- **THEN** el handle no aparece como enlace y tocarlo no abre la app de correo
+- **WHEN** la respuesta se muestra en Safari o Chrome en iOS y el visitante toca el handle
+- **THEN** iOS no lo detecta como dirección de correo y no abre la app de correo
+- **AND** se abre el perfil del autor en la app preferida, porque el handle forma parte del enlace del autor
 
 #### Scenario: Aspecto visual equivalente
 - **WHEN** se renderiza la cabecera en un navegador de escritorio
@@ -79,7 +80,7 @@ En la cabecera de cada respuesta, el nombre del autor, su handle y la fecha SHAL
 - **THEN** el nombre, el handle y la fecha se muestran a ese tamaño
 
 ### Requirement: Los enlaces del texto abren en la app preferida
-Los enlaces de las menciones y el enlace «View more» de una respuesta SHALL abrir en la app que el visitante eligió en el selector, o en bsky.app si no ha elegido ninguna o el almacenamiento no está disponible. Los hashtags SHALL abrir en la app elegida solo si es Bluesky, Mu o Deer, y en bsky.app con un dominio personalizado o sin preferencia. Cada enlace SHALL usar la preferencia vigente cuando el visitante lo abre, aunque la haya cambiado después de renderizarse.
+Las menciones y el enlace «View more» de una respuesta SHALL abrir en la app elegida en el selector, con sus rutas de perfil o de post, o en bsky.app si no hay preferencia o no hay almacenamiento. Un dominio personalizado SHALL usar las rutas de bsky.app. Los hashtags SHALL abrir en la app elegida solo si está en la lista y tiene ruta de hashtag; si no, en bsky.app. Cada enlace SHALL usar la preferencia vigente cuando el visitante lo abre.
 
 #### Scenario: Sin preferencia
 - **WHEN** el visitante no ha elegido ninguna app y abre la mención de un usuario
@@ -93,6 +94,10 @@ Los enlaces de las menciones y el enlace «View more» de una respuesta SHALL ab
 - **WHEN** el hilo ya está renderizado, el visitante elige Mu en el selector y después abre una mención
 - **THEN** se abre `https://mu.social/profile/<did>`
 
+#### Scenario: App con rutas propias
+- **WHEN** el visitante eligió una app de la lista cuya ruta de perfil no es la de bsky.app y abre una mención
+- **THEN** se abre el perfil con la ruta de esa app
+
 #### Scenario: Dominio personalizado
 - **WHEN** el visitante eligió el dominio personalizado `app.example` y abre una mención
 - **THEN** se abre `https://app.example/profile/<did>`
@@ -101,9 +106,17 @@ Los enlaces de las menciones y el enlace «View more» de una respuesta SHALL ab
 - **WHEN** el visitante eligió Deer y abre un hashtag
 - **THEN** se abre `https://deer.social/hashtag/<tag>`
 
+#### Scenario: Hashtag con una app sin ruta de hashtag
+- **WHEN** el visitante eligió una app de la lista que no tiene ruta de hashtag y abre un hashtag
+- **THEN** se abre `https://bsky.app/hashtag/<tag>`
+
 #### Scenario: Hashtag con un dominio personalizado
 - **WHEN** el visitante eligió el dominio personalizado `app.example` y abre un hashtag
 - **THEN** se abre `https://bsky.app/hashtag/<tag>`, porque no se sabe si esa app tiene la ruta `/hashtag/`
+
+#### Scenario: Respuesta sin DID del autor
+- **WHEN** una respuesta cuyo autor no tiene DID tiene más respuestas de las cargadas
+- **THEN** no se muestra el enlace «View more», porque no hay post al que enlazar
 
 ### Requirement: Las respuestas de autores etiquetados no se muestran
 Una respuesta cuyo autor lleva sobre su cuenta alguna de las etiquetas que ya ocultan un post SHALL NOT mostrarse, y con ella SHALL ocultarse todo su subárbol de respuestas. Una etiqueta es de la cuenta cuando su `uri` es el DID del autor. Las etiquetas puestas sobre el registro de perfil del autor (`at://<did>/app.bsky.actor.profile/self`) SHALL NOT ocultar sus respuestas.
@@ -131,3 +144,33 @@ Si ninguna de las respuestas cargadas llega a mostrarse (por el threadgate, por 
 #### Scenario: Alguna respuesta visible
 - **WHEN** el hilo tiene dos respuestas y solo una está oculta
 - **THEN** el elemento muestra la lista con la respuesta visible y el botón «Comment»
+
+### Requirement: El autor de una respuesta enlaza a su perfil
+El nombre y el handle del autor de cada respuesta SHALL ser un único enlace a su perfil, que abre en una pestaña nueva en la app preferida, con las mismas reglas que las menciones. Si el autor no tiene DID, SHALL mostrarse como texto sin enlace.
+
+#### Scenario: Sin preferencia
+- **WHEN** el visitante no ha elegido ninguna app y pulsa el nombre del autor de una respuesta
+- **THEN** se abre `https://bsky.app/profile/<did del autor>` en una pestaña nueva
+
+#### Scenario: Con preferencia
+- **WHEN** el visitante eligió Mu y pulsa el handle del autor de una respuesta
+- **THEN** se abre `https://mu.social/profile/<did del autor>`
+
+#### Scenario: Nombre y handle siguen separados
+- **WHEN** se renderiza una respuesta de "Xulio Zé" con handle `xulioze.com`
+- **THEN** el texto del enlace del autor es "Xulio Zé @xulioze.com", con espacio
+
+### Requirement: La fecha de una respuesta enlaza a la respuesta
+La fecha de cada respuesta SHALL ser un enlace a esa respuesta, que abre en una pestaña nueva en la app preferida, con las mismas reglas que «View more». La fecha completa SHALL seguir apareciendo al pasar el ratón.
+
+#### Scenario: Sin preferencia
+- **WHEN** el visitante no ha elegido ninguna app y pulsa la fecha de una respuesta
+- **THEN** se abre `https://bsky.app/profile/<did del autor>/post/<rkey de la respuesta>` en una pestaña nueva
+
+#### Scenario: Con preferencia
+- **WHEN** el visitante eligió Deer y pulsa la fecha de una respuesta
+- **THEN** se abre `https://deer.social/profile/<did del autor>/post/<rkey de la respuesta>`
+
+#### Scenario: Fecha completa
+- **WHEN** el visitante pasa el ratón por la fecha de una respuesta
+- **THEN** ve la fecha y hora completas, como antes

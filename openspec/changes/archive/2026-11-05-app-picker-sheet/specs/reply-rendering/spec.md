@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Los enlaces del texto abren en la app preferida
-Los enlaces de las menciones y el enlace «View more» de una respuesta SHALL abrir en la app que el visitante eligió en el selector, con la ruta de perfil o de post de esa app, o en bsky.app si no ha elegido ninguna o el almacenamiento no está disponible. Un dominio personalizado SHALL usar las rutas de bsky.app. Los hashtags SHALL abrir en la app elegida solo si está en la lista del selector y tiene ruta de hashtag; si no, en bsky.app. Cada enlace SHALL usar la preferencia vigente cuando el visitante lo abre, aunque la haya cambiado después de renderizarse.
+Las menciones y el enlace «View more» de una respuesta SHALL abrir en la app elegida en el selector, con sus rutas de perfil o de post, o en bsky.app si no hay preferencia o no hay almacenamiento. Un dominio personalizado SHALL usar las rutas de bsky.app. Los hashtags SHALL abrir en la app elegida solo si está en la lista y tiene ruta de hashtag; si no, en bsky.app. Cada enlace SHALL usar la preferencia vigente cuando el visitante lo abre.
 
 #### Scenario: Sin preferencia
 - **WHEN** el visitante no ha elegido ninguna app y abre la mención de un usuario
