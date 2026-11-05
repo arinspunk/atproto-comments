@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="atproto-comments.css"><script src="check.js"></script>
+<style>
+  /* Aggressive page styles that leak into the light DOM. */
+  p { margin: 3em 0; padding: 1em; font: italic 22px Georgia, serif; color: crimson; text-transform: uppercase; }
+  ul { margin: 2em; padding: 2em; list-style: square; background: khaki; }
+  li { margin: 1em; padding: 1em; }
+  li::before { content: "★ "; }
+  a { color: magenta; text-decoration: underline wavy; font-weight: 900; }
+  button { background: navy; color: yellow; border: 4px dashed red; padding: 1em 2em; font: 20px monospace; border-radius: 0; text-transform: uppercase; }
+  input { background: black; color: lime; border: 4px solid orange; padding: 1em; width: 300px; font: 20px monospace; }
+  /* An ancestor that creates a containing block and a stacking context. */
+  .trap { transform: translateZ(0); z-index: 1; position: relative; overflow: hidden; height: 60vh; }
+  .cover { position: relative; z-index: 9999; background: rgb(0 128 0 / 50%); height: 4em; }
+</style>
+</head>
+<body style="font-family: system-ui, sans-serif; padding: 0 16px">
+<p><a href="./">← all checks</a></p><h1 id="r">…</h1><pre id="errors" style="color:#b00"></pre>
+<ol>
+  <li>Open the app picker from "Comment" or "Reply": it looks the same as on the other pages (no khaki, stars, magenta links, navy buttons or orange inputs).</li>
+  <li>It is anchored to the bottom of the window, full width, above the green bar.</li>
+</ol>
+<div class="cover"></div>
+<div class="trap">
+  <atproto-comments thread-uri="at://did:plc:test/app.bsky.feed.post/hostile" lang="en"></atproto-comments>
+</div>
+<script>
+  report(() => [calls === 1 && lists("atproto-comments") === 1, `${calls} request(s), ${lists("atproto-comments")} list(s)`]);
+</script>
+<script type="module" src="index.js"></script>
+</body>
+</html>

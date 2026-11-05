@@ -1,7 +1,7 @@
 // Loading state, the accessible names of the picker buttons, and the new or
 // changed strings (unknownAuthor, viewMore, dates over a year old).
 
-import { MOD, replyView, threadView, U, withThread } from "./harness.mjs";
+import { CSS_LINK, MOD, replyView, threadView, U, withThread } from "./harness.mjs";
 
 const busy = () => {
   const e = document.querySelector("atproto-comments");
@@ -10,6 +10,26 @@ const busy = () => {
 const BUSY = `window.busy = ${busy.toString()};`;
 const on = { busy: "true", loadingClass: true };
 const off = { busy: null, loadingClass: false };
+
+const PREF = "atproto-preferred-app";
+const pref = (domain) => `try { localStorage.setItem(${JSON.stringify(PREF)}, ${JSON.stringify(domain)}); } catch {}`;
+const BYLINE = ".atproto-reply__byline";
+const PERMALINK = ".atproto-reply__permalink";
+
+/** The href a link has when the visitor opens it: read on a real click, navigation prevented. */
+async function hrefOnClick(page, selector) {
+  await page.evaluate(() => {
+    document.addEventListener("click", (e) => {
+      window.__opened = e.target.closest("a")?.href;
+      e.preventDefault();
+    }, { once: true });
+  });
+  await page.click(selector);
+  return page.evaluate(() => window.__opened);
+}
+
+const AUTHOR = threadView("A", [replyView("ana", { author: { did: "did:plc:ana", handle: "xulioze.com", displayName: "Xulio Zé" } })]);
+const AUTHOR_BODY = `<atproto-comments thread-uri="${U("A")}"></atproto-comments>${MOD}`;
 
 export const scenarios = [
   {
@@ -88,7 +108,8 @@ export const scenarios = [
     body: `<atproto-comments thread-uri="${U("A")}"></atproto-comments>${MOD}`,
     evaluate: async () => {
       await sleep(200);
-      const go = document.querySelector("atproto-comments > .atproto-app-action .atproto-app-popover__go");
+      document.querySelector("atproto-comments > .atproto-app-action .atproto-app-btn").click();
+      const go = document.querySelector("atproto-comments .atproto-app-sheet__go");
       const arrow = go.querySelector("span");
       return { label: go.getAttribute("aria-label"), arrow: arrow.textContent, hidden: arrow.getAttribute("aria-hidden") };
     },
@@ -99,20 +120,26 @@ export const scenarios = [
     body: `<atproto-comments thread-uri="${U("A")}" strings='{"go":"Ir"}'></atproto-comments>${MOD}`,
     evaluate: async () => {
       await sleep(200);
-      const go = document.querySelector("atproto-comments > .atproto-app-action .atproto-app-popover__go");
+      document.querySelector("atproto-comments > .atproto-app-action .atproto-app-btn").click();
+      const go = document.querySelector("atproto-comments .atproto-app-sheet__go");
       return { label: go.getAttribute("aria-label"), arrow: go.textContent };
     },
     expected: { label: "Ir", arrow: "→" },
   },
   {
-    name: "ningún botón del selector lleva aria-haspopup",
+    name: "solo los botones del selector llevan aria-haspopup, y es \"dialog\"",
     body: `<atproto-comments thread-uri="${U("A")}"></atproto-comments>${MOD}`,
     evaluate: async () => {
       await sleep(200);
       const buttons = document.querySelectorAll(".atproto-app-btn");
-      return { buttons: buttons.length > 1, haspopup: document.querySelectorAll("[aria-haspopup]").length };
+      const haspopup = [...document.querySelectorAll("[aria-haspopup]")];
+      return {
+        buttons: buttons.length > 1,
+        same: haspopup.length === buttons.length && haspopup.every((b) => b.matches(".atproto-app-btn")),
+        values: [...new Set(haspopup.map((b) => b.getAttribute("aria-haspopup")))],
+      };
     },
-    expected: { buttons: true, haspopup: 0 },
+    expected: { buttons: true, same: true, values: ["dialog"] },
   },
   {
     name: "autor sin nombre ni handle: «Desconhecido» con lang=pt",
@@ -144,5 +171,94 @@ export const scenarios = [
       return { more: document.querySelector(".atproto-reply__more").textContent };
     },
     expected: { more: "View more replies" },
+  },
+  {
+    name: "autor y fecha enlazados sin preferencia: en bsky.app",
+    body: AUTHOR_BODY,
+    init: withThread("A", AUTHOR),
+    run: async (page) => {
+      await page.waitForTimeout(200);
+      return {
+        author: await hrefOnClick(page, BYLINE),
+        date: await hrefOnClick(page, PERMALINK),
+        target: await page.$$eval(`${BYLINE}, ${PERMALINK}`, (els) => els.map((a) => `${a.tagName} ${a.target} ${a.rel}`)),
+        timeInLink: await page.$eval(PERMALINK, (a) => a.firstElementChild?.tagName),
+      };
+    },
+    expected: {
+      author: "https://bsky.app/profile/did:plc:ana",
+      date: "https://bsky.app/profile/did:plc:ana/post/ana",
+      target: ["A _blank noopener noreferrer", "A _blank noopener noreferrer"],
+      timeInLink: "TIME",
+    },
+  },
+  {
+    name: "autor y fecha enlazados con Deer",
+    body: AUTHOR_BODY,
+    init: withThread("A", AUTHOR) + pref("deer.social"),
+    run: async (page) => {
+      await page.waitForTimeout(200);
+      return { author: await hrefOnClick(page, BYLINE), date: await hrefOnClick(page, PERMALINK) };
+    },
+    expected: {
+      author: "https://deer.social/profile/did:plc:ana",
+      date: "https://deer.social/profile/did:plc:ana/post/ana",
+    },
+  },
+  {
+    name: "autor y fecha: preferencia cambiada después del render",
+    body: AUTHOR_BODY,
+    init: withThread("A", AUTHOR),
+    run: async (page) => {
+      await page.waitForTimeout(200);
+      await page.evaluate(() => localStorage.setItem("atproto-preferred-app", "mu.social"));
+      return { author: await hrefOnClick(page, BYLINE), date: await hrefOnClick(page, PERMALINK) };
+    },
+    expected: {
+      author: "https://mu.social/profile/did:plc:ana",
+      date: "https://mu.social/profile/did:plc:ana/post/ana",
+    },
+  },
+  {
+    name: "autor sin DID: byline y fecha sin enlace, sin «Reply» ni «View more»",
+    body: `${CSS_LINK}<atproto-comments thread-uri="${U("N")}"></atproto-comments>${MOD}`,
+    init: withThread("N", threadView("N", [{
+      ...replyView("nodid"),
+      post: { ...replyView("nodid").post, replyCount: 3, author: { handle: "nodid.example" } },
+    }])),
+    evaluate: async () => {
+      await sleep(200);
+      return {
+        replyBtn: document.querySelectorAll(".atproto-reply .atproto-app-btn").length,
+        more: document.querySelectorAll(".atproto-reply__more").length,
+        byline: document.querySelector(".atproto-reply__byline").tagName,
+        links: document.querySelectorAll(".atproto-reply__header a").length,
+        time: !!document.querySelector(".atproto-reply__header > .atproto-reply__time"),
+        separator: getComputedStyle(document.querySelector(".atproto-reply__time"), "::before").content,
+      };
+    },
+    expected: { replyBtn: 0, more: 0, byline: "SPAN", links: 0, time: true, separator: '"·\u00a0"' },
+  },
+  {
+    name: "texto del byline enlazado: «Xulio Zé @xulioze.com»",
+    body: AUTHOR_BODY,
+    init: withThread("A", AUTHOR),
+    evaluate: async () => {
+      await sleep(200);
+      return { text: document.querySelector(".atproto-reply__byline").innerText };
+    },
+    expected: { text: "Xulio Zé @xulioze.com" },
+  },
+  {
+    name: "fecha enlazada: conserva el title con la fecha completa",
+    body: `${CSS_LINK}<atproto-comments lang="en-GB" thread-uri="${U("T")}"></atproto-comments>${MOD}`,
+    timezoneId: "Europe/Lisbon",
+    init: withThread("T", threadView("T", [replyView("old", { record: { createdAt: "2020-01-02T12:00:00Z" } })])),
+    evaluate: async () => {
+      await sleep(200);
+      const time = document.querySelector(".atproto-reply__permalink > .atproto-reply__time");
+      return { title: time.title, separator: getComputedStyle(time.parentElement, "::before").content };
+    },
+    expected: { title: "02/01/2020, 12:00", separator: '"·\u00a0"' },
   },
 ];

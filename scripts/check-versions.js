@@ -1,6 +1,8 @@
 // Fails if the release version differs between package.json, package-lock.json,
-// deno.json, the browser tests' lockfile and the README pins. With
-// `--tag <ref>` the tag (without its leading `v`) must match too.
+// deno.json, the browser tests' lockfile and the README pins, or if the README's
+// major-version pins (`atproto-comments@N/`, "`@N` gets every N.x …, never a
+// breaking M.0") are not for package.json's major. With `--tag <ref>` the tag
+// (without its leading `v`) must match too.
 import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
@@ -28,6 +30,26 @@ readme.forEach((line, i) => {
   }
 });
 
+// Major-version pins: CDN URLs and the sentence that explains them.
+const major = pkg.version.split(".")[0];
+const MAJOR_PIN = /atproto-comments@(\d+)\//g;
+const MAJOR_PROSE = /`@(\d+)` gets every (\d+)\.x\b.*?never a breaking (\d+)\.0/g;
+const majorProblems = [];
+let majorPins = 0;
+readme.forEach((line, i) => {
+  const where = `README.md:${i + 1}`;
+  for (const m of line.matchAll(MAJOR_PIN)) {
+    majorPins++;
+    if (m[1] !== major) majorProblems.push([where, `@${m[1]}/ (major pin)`]);
+  }
+  for (const m of line.matchAll(MAJOR_PROSE)) {
+    majorPins++;
+    if (m[1] !== major || m[2] !== major || m[3] !== String(Number(major) + 1)) {
+      majorProblems.push([where, `"\`@${m[1]}\` gets every ${m[2]}.x …, never a breaking ${m[3]}.0"`]);
+    }
+  }
+});
+
 // A malformed argument must not silently skip the tag check.
 const args = process.argv.slice(2);
 if (args.length > 0) {
@@ -38,8 +60,9 @@ if (args.length > 0) {
   found.push(["tag", args[1].replace(/^v/, "")]);
 }
 
-const problems = found.filter(([, v]) => v !== pkg.version);
+const problems = [...found.filter(([, v]) => v !== pkg.version), ...majorProblems];
 if (pins === 0) problems.push(["README.md", "no version pins found"]);
+if (majorPins === 0) problems.push(["README.md", "no major version pins found"]);
 
 if (problems.length > 0) {
   console.error(`Version mismatch: package.json is ${pkg.version}`);
@@ -49,4 +72,4 @@ if (problems.length > 0) {
   }
   process.exit(1);
 }
-console.log(`Versions match: ${pkg.version} (${pins} README pins)`);
+console.log(`Versions match: ${pkg.version} (${pins} README pins, ${majorPins} major pins)`);

@@ -27,3 +27,8 @@ Deno.test("bylineParts uses the unknown text when there is no name or handle", (
 Deno.test("bylineParts separator is whitespace", () => {
   assertEquals(/^\s+$/.test(bylineParts({ handle: "a.b" }, "Unknown").separator), true);
 });
+
+Deno.test("bylineParts treats an empty display name or handle as missing", () => {
+  assertEquals(text(bylineParts({ displayName: "", handle: "xulioze.com" }, "Unknown")), "xulioze.com @xulioze.com");
+  assertEquals(bylineParts({ displayName: "", handle: "" }, "Desconhecido"), { name: "Desconhecido", handle: null, separator: " " });
+});

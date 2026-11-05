@@ -2,6 +2,53 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/): new attributes, properties, `strings` keys, CSS custom properties or classes are minor releases.
 
+## [2.0.0] - 2026-11-05
+
+A major release: the app picker is a new panel with new markup, and each reply's author and date are now links. Pages that only use the component's defaults need no changes besides the version pins; pages with their own CSS for the picker or the byline should read [Migrating from 1.x](#migrating-from-1x).
+
+### Removed
+
+- The popover app picker, its use of the Popover API and its fallback mode for browsers without it, with the classes `.atproto-app-popover`, `.atproto-app-popover--fallback`, `.atproto-app-popover__link`, `.atproto-app-popover__link--active`, `.atproto-app-popover__separator`, `.atproto-app-popover__custom`, `.atproto-app-popover__input` and `.atproto-app-popover__go`.
+- `popovertarget`, `aria-controls` and `aria-expanded` on the buttons that open the picker.
+
+### Changed
+
+- **Comment** and **Reply** open a modal panel anchored to the bottom of the window, full width, with its content in a centred column. There is one panel per element, a `<dialog>` created the first time it opens. It has a heading ("Comment in…" or "Reply to Ana in…"), a close button, the list of apps and the "Other app" field. It closes with Escape, its close button, a click outside it or choosing an app, and focus goes back to the button that opened it. Scrolling or resizing the window no longer closes it, and an ancestor with `transform` or `z-index` can no longer misplace or cover it.
+- The buttons that open the picker have `aria-haspopup="dialog"`.
+- The picker lists more apps: Bluesky first, then Anisota, Blacksky, Deer, Impro, Mu, Northsky and Red Dwarf. The app the visitor chose last comes first, marked "Last used". A custom domain is prefilled in "Other app", as before. The stored preference is the same, so a choice made with 1.x is kept.
+- "Other app" is now the `<label>` of its field instead of a separator above it.
+- Each app opens posts, profiles and hashtags with its own routes. Hashtags open in the chosen app only if it has hashtag pages (Anisota and Red Dwarf don't); otherwise, and for custom domains, they open on bsky.app.
+- The author of each reply (`.atproto-reply__byline`) is now a link to their profile, an `<a>` instead of a `<span>`, and the date is wrapped in a new link to the reply, `.atproto-reply__permalink`. Both open in the visitor's chosen app, like mentions. The `· ` before the date moved from `.atproto-reply__time::before` to `.atproto-reply__permalink::before`. Authors with no DID are shown without links, as before.
+- The app picker needs `<dialog>` (Safari and iOS 15.4, which the component already required) instead of the Popover API.
+- A reply whose author has no DID no longer has a **Reply** button or a **View more replies** link: they opened `/profile//post/…`.
+- The accessible name of a **Reply** button (`replyTo`) and the picker's heading (`replyIn`) use the same name as the reply's byline. An author with an empty display name and no handle is now "Unknown" (`unknownAuthor`) instead of an empty name ("Reply to ").
+
+### Added
+
+- `strings` keys `commentIn` (`Comment in…`, `Comentar em…`), `replyIn` (`Reply to {name} in…`, `Responder a {name} em…`), `close` (`Close`, `Fechar`), `lastUsed` (`Last used`, `Última usada`) and `pickerNote`, an optional note under the picker's heading, empty by default.
+- Classes for the new panel: `.atproto-app-sheet`, `__body`, `__header`, `__title`, `__close`, `__note`, `__list`, `__app`, `__app--last-used`, `__name`, `__badge`, `__arrow`, `__custom`, `__label`, `__input` and `__go`.
+
+### Migrating from 1.x
+
+- Change the version pins: `atproto-comments@1/` → `atproto-comments@2/` on the CDN, `^2.0.0` in npm, `@2.0.0` on JSR.
+- Rename the picker classes in your CSS:
+
+  | 1.x | 2.0 |
+  |---|---|
+  | `.atproto-app-popover` | `.atproto-app-sheet` (the `<dialog>`; its content is in `.atproto-app-sheet__body`) |
+  | `.atproto-app-popover--fallback` | none: there is no fallback mode |
+  | `.atproto-app-popover__link` | `.atproto-app-sheet__app` |
+  | `.atproto-app-popover__link--active` | `.atproto-app-sheet__app--last-used` |
+  | `.atproto-app-popover__separator` | `.atproto-app-sheet__label` |
+  | `.atproto-app-popover__custom` | `.atproto-app-sheet__custom` |
+  | `.atproto-app-popover__input` | `.atproto-app-sheet__input` |
+  | `.atproto-app-popover__go` | `.atproto-app-sheet__go` |
+  | `.atproto-app-popover:popover-open` | `.atproto-app-sheet[open]` |
+
+- `.atproto-reply__byline` is now an `<a>` when the author has a DID: rules written for `span.atproto-reply__byline` no longer match, and your page's link styles may apply to it. The date's `<time>` is inside the new `a.atproto-reply__permalink`; a rule on `.atproto-reply__time::before` should move to `.atproto-reply__permalink::before`.
+- If your page relied on a button's `aria-expanded` or `popovertarget`, use the `open` attribute of `dialog.atproto-app-sheet` instead.
+- To stay on 1.x for now, pin `@1` or `@1.4.0`: 1.x is unchanged.
+
 ## [1.4.0] - 2026-10-24
 
 ### Added
@@ -134,6 +181,7 @@ Initial release.
 - Theming with `--atproto-*` custom properties and `.atproto-*` classes.
 - Published on npm (ES module and a self-registering script), JSR and jsDelivr.
 
+[2.0.0]: https://github.com/arinspunk/atproto-comments/compare/v1.4.0...v2.0.0
 [1.1.3]: https://github.com/arinspunk/atproto-comments/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/arinspunk/atproto-comments/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/arinspunk/atproto-comments/compare/v1.1.0...v1.1.1

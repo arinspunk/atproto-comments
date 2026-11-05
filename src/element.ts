@@ -22,6 +22,7 @@ import {
   type UiStrings,
 } from "./i18n.ts";
 
+import { type AppLinkTarget, appUrl, findApp, orderedApps } from "./apps.ts";
 import { bylineParts } from "./byline.ts";
 import { formatAbsoluteDate, formatRelativeTime, isValidDate } from "./date.ts";
 import { createScheduler, dataKey, isInvalidKey, nextStep } from "./lifecycle.ts";
@@ -40,45 +41,15 @@ interface Loc {
   locale: string;
 }
 
-const KNOWN_APPS = [
-  { label: "Bluesky", domain: "bsky.app" },
-  { label: "Mu", domain: "mu.social" },
-  { label: "Deer", domain: "deer.social" },
-];
-const KNOWN_DOMAINS = new Set(KNOWN_APPS.map((a) => a.domain));
 const DEFAULT_APPVIEW = "https://public.api.bsky.app";
 const DEFAULT_MAX_DEPTH = 6;
 
-let popoverSupport: boolean | undefined;
+const appLinks = new WeakMap<HTMLAnchorElement, AppLinkTarget>();
 
-/** Whether the browser has the Popover API. Checked lazily so the module loads without the DOM. */
-function supportsPopover(): boolean {
-  return (popoverSupport ??= "popover" in HTMLElement.prototype);
-}
-
-/** A link that opens in the visitor's preferred app. */
-interface AppLink {
-  path: string;
-  /** Any preferred app, custom domains included; otherwise only one of KNOWN_APPS. */
-  anyApp: boolean;
-}
-
-const appLinks = new WeakMap<HTMLAnchorElement, AppLink>();
-
-/**
- * Origin of the preferred app, or bsky.app without one. Routes that not every
- * app may have (hashtags) pass `anyApp = false`, so a custom domain falls back
- * to bsky.app too.
- */
-function appBase(anyApp: boolean): string {
-  const pref = readPref();
-  return `https://${pref && (anyApp || KNOWN_DOMAINS.has(pref)) ? pref : "bsky.app"}`;
-}
-
-/** Points `a` at `link.path` in the preferred app, and keeps it up to date (see refreshAppLink). */
-function setAppLink(a: HTMLAnchorElement, link: AppLink): void {
-  appLinks.set(a, link);
-  a.href = appBase(link.anyApp) + link.path;
+/** Points `a` at `target` in the preferred app, and keeps it up to date (see refreshAppLink). */
+function setAppLink(a: HTMLAnchorElement, target: AppLinkTarget): void {
+  appLinks.set(a, target);
+  a.href = appUrl(readPref(), target);
 }
 
 /**
@@ -88,8 +59,8 @@ function setAppLink(a: HTMLAnchorElement, link: AppLink): void {
  */
 function refreshAppLink(e: Event): void {
   const a = e.target instanceof Element ? e.target.closest("a") : null;
-  const link = a ? appLinks.get(a) : undefined;
-  if (a && link) a.href = appBase(link.anyApp) + link.path;
+  const target = a ? appLinks.get(a) : undefined;
+  if (a && target) a.href = appUrl(readPref(), target);
 }
 
 function buildFacetedText(record: PostRecord): DocumentFragment {
@@ -100,8 +71,8 @@ function buildFacetedText(record: PostRecord): DocumentFragment {
       continue;
     }
     const a = document.createElement("a");
-    if (segment.mention !== undefined) setAppLink(a, { path: `/profile/${segment.mention}`, anyApp: true });
-    else if (segment.tag !== undefined) setAppLink(a, { path: `/hashtag/${encodeURIComponent(segment.tag)}`, anyApp: false });
+    if (segment.mention !== undefined) setAppLink(a, { kind: "profile", did: segment.mention });
+    else if (segment.tag !== undefined) setAppLink(a, { kind: "hashtag", tag: segment.tag });
     else a.href = segment.href!;
     a.rel = "noopener noreferrer";
     a.target = "_blank";
@@ -139,232 +110,244 @@ function buildAvatarWrap(author: ProfileViewBasic): HTMLElement {
   return wrap;
 }
 
-let popoverCounter = 0;
-
-/** `close` of the open fallback panel. At most one is open at a time. */
-let openFallback: (() => void) | null = null;
-
-function buildAppPopover(
-  targetDid: string,
-  targetRkey: string,
-  popoverId: string,
-  loc: Loc,
-  close: () => void,
-): HTMLElement {
-  const preferred = readPref();
-  const popover = document.createElement("div");
-  popover.id = popoverId;
-  popover.className = "atproto-app-popover";
-  if (supportsPopover()) {
-    popover.setAttribute("popover", "");
-  } else {
-    // Without the Popover API the attribute is unknown and would not hide the panel.
-    popover.hidden = true;
-    popover.classList.add("atproto-app-popover--fallback");
-  }
-
-  const t = (k: StringKey) => translate(loc.strings, k);
-
-  for (const app of KNOWN_APPS) {
-    const a = document.createElement("a");
-    a.href = `https://${app.domain}/profile/${targetDid}/post/${targetRkey}`;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.textContent = app.label;
-    a.className = "atproto-app-popover__link" +
-      (preferred === app.domain ? " atproto-app-popover__link--active" : "");
-    a.addEventListener("click", () => {
-      writePref(app.domain);
-      close();
-    });
-    popover.appendChild(a);
-  }
-
-  const separator = document.createElement("div");
-  separator.className = "atproto-app-popover__separator";
-  separator.textContent = t("otherApp");
-  popover.appendChild(separator);
-
-  const customWrap = document.createElement("div");
-  customWrap.className = "atproto-app-popover__custom";
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = t("inputPlaceholder");
-  input.setAttribute("aria-label", t("otherApp"));
-  // A domain, not prose: keep the mobile keyboard from capitalizing or correcting it.
-  input.inputMode = "url";
-  input.autocapitalize = "off";
-  input.autocomplete = "off";
-  input.spellcheck = false;
-  input.className = "atproto-app-popover__input";
-  if (preferred && !KNOWN_DOMAINS.has(preferred)) input.value = preferred;
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "atproto-app-popover__go";
-  btn.setAttribute("aria-label", t("go"));
-  // The arrow is decoration; the button's name comes from `go`.
-  const arrow = document.createElement("span");
-  arrow.setAttribute("aria-hidden", "true");
-  arrow.textContent = "→";
-  btn.appendChild(arrow);
-
-  function clearInvalid() {
-    input.setCustomValidity("");
-    input.removeAttribute("aria-invalid");
-  }
-
-  function openCustom() {
-    clearInvalid();
-    const domain = normalizeDomain(input.value);
-    if (!domain) {
-      // The browser shows and announces the message; reportValidity() also focuses
-      // the input, so the panel stays open on scroll or resize.
-      input.setCustomValidity(t("invalidDomain"));
-      input.setAttribute("aria-invalid", "true");
-      input.reportValidity();
-      return;
-    }
-    writePref(domain);
-    window.open(`https://${domain}/profile/${targetDid}/post/${targetRkey}`, "_blank", "noopener,noreferrer");
-    close();
-  }
-
-  btn.addEventListener("click", openCustom);
-  input.addEventListener("keydown", (e) => { if (e.key === "Enter") openCustom(); });
-  input.addEventListener("input", clearInvalid);
-
-  customWrap.appendChild(input);
-  customWrap.appendChild(btn);
-  popover.appendChild(customWrap);
-
-  return popover;
+/** The post a picker opens, and the heading it shows. */
+interface SheetTarget {
+  did: string;
+  rkey: string;
+  /** `null` for the main button ("Comment in…"); the author's name for a reply. */
+  replyTo: string | null;
 }
 
-function buildAppButton(label: string, popoverId: string, extraClass?: string, ariaLabel?: string): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.setAttribute(supportsPopover() ? "popovertarget" : "aria-controls", popoverId);
-  btn.setAttribute("aria-expanded", "false");
-  btn.className = "atproto-app-btn" + (extraClass ? ` ${extraClass}` : "");
-  btn.textContent = label;
-  if (ariaLabel) btn.setAttribute("aria-label", ariaLabel);
-  return btn;
-}
+/** Opens the element's app picker for `target`, returning focus to `opener` on close. */
+type OpenSheet = (opener: HTMLElement, target: SheetTarget) => void;
 
+/** Builds the button that opens the app picker. */
 function buildAppAction(
   label: string,
-  targetDid: string,
-  targetRkey: string,
-  loc: Loc,
+  target: SheetTarget,
+  open: OpenSheet,
   btnClass?: string,
   ariaLabel?: string,
 ): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "atproto-app-action";
-
-  const id = `atproto-pop-${++popoverCounter}`;
-  const btn = buildAppButton(label, id, btnClass, ariaLabel);
-  let close: () => void;
-  const popover = buildAppPopover(targetDid, targetRkey, id, loc, () => close());
-
-  let onViewportChange: (() => void) | null = null;
-
-  // Shared by both modes; the panel must already be visible so it can be measured.
-  function onOpen() {
-    const preferred = readPref();
-    for (const a of popover.querySelectorAll<HTMLAnchorElement>(".atproto-app-popover__link")) {
-      let hostname = "";
-      try { hostname = new URL(a.href).hostname; } catch { /* ignore */ }
-      a.classList.toggle("atproto-app-popover__link--active", hostname === preferred);
-    }
-    const input = popover.querySelector<HTMLInputElement>(".atproto-app-popover__input");
-    if (input) {
-      input.value = preferred && !KNOWN_DOMAINS.has(preferred) ? preferred : "";
-      input.setCustomValidity("");
-      input.removeAttribute("aria-invalid");
-    }
-
-    const rect = btn.getBoundingClientRect();
-    const gap = 4;
-    const height = popover.offsetHeight;
-    const popoverWidth = popover.offsetWidth || 160;
-    let top = rect.bottom + gap;
-    if (rect.bottom + gap + height > window.innerHeight && rect.top - gap - height >= 0) {
-      top = rect.top - gap - height;
-    }
-    popover.style.margin = "0";
-    popover.style.top = `${top}px`;
-    const left = Math.min(rect.left, window.innerWidth - popoverWidth - gap);
-    popover.style.left = `${Math.max(gap, left)}px`;
-
-    // The virtual keyboard scrolls or resizes the page when the input gets focus;
-    // that must not close the panel while the visitor is typing.
-    onViewportChange = () => {
-      if (!popover.contains(document.activeElement)) close();
-    };
-    window.addEventListener("scroll", onViewportChange, { passive: true });
-    window.addEventListener("resize", onViewportChange, { passive: true });
-    btn.setAttribute("aria-expanded", "true");
-  }
-
-  function onClose() {
-    if (onViewportChange) {
-      window.removeEventListener("scroll", onViewportChange);
-      window.removeEventListener("resize", onViewportChange);
-    }
-    onViewportChange = null;
-    btn.setAttribute("aria-expanded", "false");
-  }
-
-  if (supportsPopover()) {
-    close = () => (popover as HTMLElement & { hidePopover?: () => void }).hidePopover?.();
-    popover.addEventListener("toggle", (e) => {
-      const te = e as ToggleEvent;
-      if (te.newState === "open") onOpen();
-      else if (te.newState === "closed") onClose();
-    });
-  } else {
-    // A panel removed from the DOM while open closes on the next event it receives,
-    // so no document listener outlives it.
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (!popover.isConnected || (!popover.contains(target) && !btn.contains(target))) close();
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (!popover.isConnected) {
-        close();
-      } else if (e.key === "Escape") {
-        close();
-        btn.focus();
-      }
-    };
-
-    const open = () => {
-      openFallback?.();
-      popover.hidden = false;
-      onOpen();
-      document.addEventListener("pointerdown", onPointerDown, true);
-      document.addEventListener("keydown", onKeyDown, true);
-      openFallback = close;
-    };
-
-    close = () => {
-      if (popover.hidden) return;
-      popover.hidden = true;
-      document.removeEventListener("pointerdown", onPointerDown, true);
-      document.removeEventListener("keydown", onKeyDown, true);
-      onClose();
-      if (openFallback === close) openFallback = null;
-    };
-
-    btn.addEventListener("click", () => (popover.hidden ? open() : close()));
-  }
-
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "atproto-app-btn" + (btnClass ? ` ${btnClass}` : "");
+  btn.textContent = label;
+  btn.setAttribute("aria-haspopup", "dialog");
+  if (ariaLabel) btn.setAttribute("aria-label", ariaLabel);
+  btn.addEventListener("click", () => open(btn, target));
   wrap.appendChild(btn);
-  wrap.appendChild(popover);
   return wrap;
+}
+
+let sheetCounter = 0;
+
+/**
+ * The app picker: one modal `<dialog>` per element, filled in each time it
+ * opens. Lives inside the host, after the rendered nodes, so it inherits the
+ * `--atproto-*` variables the page sets on the element.
+ */
+class AppSheet {
+  readonly dialog = document.createElement("dialog");
+  #title = document.createElement("p");
+  #close = document.createElement("button");
+  #note = document.createElement("p");
+  #list = document.createElement("ul");
+  #label = document.createElement("label");
+  #input = document.createElement("input");
+  #go = document.createElement("button");
+  #target: SheetTarget | null = null;
+  #opener: HTMLElement | null = null;
+  #loc: Loc | null = null;
+  #host: HTMLElement;
+
+  constructor(host: HTMLElement) {
+    this.#host = host;
+    const id = `atproto-sheet-${++sheetCounter}`;
+    const d = this.dialog;
+    d.className = "atproto-app-sheet";
+    d.setAttribute("aria-labelledby", `${id}-title`);
+
+    const body = document.createElement("div");
+    body.className = "atproto-app-sheet__body";
+
+    const header = document.createElement("div");
+    header.className = "atproto-app-sheet__header";
+    // A <p>, not a heading: in the light DOM the page's heading styles would apply.
+    this.#title.className = "atproto-app-sheet__title";
+    this.#title.id = `${id}-title`;
+    this.#close.type = "button";
+    this.#close.className = "atproto-app-sheet__close";
+    this.#close.appendChild(hiddenGlyph("×"));
+    header.append(this.#title, this.#close);
+
+    this.#note.className = "atproto-app-sheet__note";
+    this.#list.className = "atproto-app-sheet__list";
+
+    const custom = document.createElement("div");
+    custom.className = "atproto-app-sheet__custom";
+    this.#label.className = "atproto-app-sheet__label";
+    this.#label.htmlFor = `${id}-input`;
+    const input = this.#input;
+    input.id = `${id}-input`;
+    input.className = "atproto-app-sheet__input";
+    input.type = "text";
+    // A domain, not prose: keep the mobile keyboard from capitalizing or correcting it.
+    input.inputMode = "url";
+    input.autocapitalize = "off";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    this.#go.type = "button";
+    this.#go.className = "atproto-app-sheet__go";
+    // The arrow is decoration; the button's name comes from `go`.
+    this.#go.appendChild(hiddenGlyph("→"));
+    custom.append(this.#label, input, this.#go);
+
+    body.append(header, this.#list, custom);
+    d.appendChild(body);
+
+    this.#close.addEventListener("click", () => d.close());
+    // A click on the ::backdrop reaches the dialog itself, outside its box. A click
+    // on the dialog's own empty area (beside the centred column) is inside it.
+    d.addEventListener("click", (e) => {
+      if (e.target !== d) return;
+      const r = d.getBoundingClientRect();
+      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!inside) d.close();
+    });
+    // Safari 15.4–16 does not reliably restore focus, so do it here.
+    d.addEventListener("close", () => {
+      const opener = this.#opener;
+      this.#opener = null;
+      if (opener?.isConnected) opener.focus();
+      else this.#focusFallback();
+    });
+    this.#go.addEventListener("click", () => this.#openCustom());
+    input.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      // Otherwise the same key press activates the opener, which gets the focus back on close.
+      e.preventDefault();
+      this.#openCustom();
+    });
+    input.addEventListener("input", () => this.#clearInvalid());
+  }
+
+  /** Fills the panel with the current strings, preference and target, and shows it. */
+  open(opener: HTMLElement, target: SheetTarget, loc: Loc): void {
+    this.#target = target;
+    this.#opener = opener;
+    this.#loc = loc;
+    const t = (k: StringKey, vars?: Record<string, string>) => translate(loc.strings, k, vars);
+    const pref = readPref();
+
+    this.#title.textContent = target.replyTo === null ? t("commentIn") : t("replyIn", { name: target.replyTo });
+    this.#close.setAttribute("aria-label", t("close"));
+
+    const note = t("pickerNote");
+    if (note) {
+      this.#note.textContent = note;
+      this.#title.parentElement!.after(this.#note);
+    } else {
+      this.#note.remove();
+    }
+
+    const items: HTMLLIElement[] = [];
+    for (const { app, lastUsed } of orderedApps(pref)) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.className = "atproto-app-sheet__app" + (lastUsed ? " atproto-app-sheet__app--last-used" : "");
+      a.href = appUrl(app.domain, { kind: "post", did: target.did, rkey: target.rkey });
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      const name = document.createElement("span");
+      name.className = "atproto-app-sheet__name";
+      name.textContent = app.name;
+      a.appendChild(name);
+      if (lastUsed) {
+        const badge = document.createElement("span");
+        badge.className = "atproto-app-sheet__badge";
+        badge.textContent = t("lastUsed");
+        a.appendChild(badge);
+      }
+      const arrow = hiddenGlyph("↗");
+      arrow.className = "atproto-app-sheet__arrow";
+      a.appendChild(arrow);
+      a.addEventListener("click", () => {
+        writePref(app.domain);
+        this.dialog.close();
+      });
+      li.appendChild(a);
+      items.push(li);
+    }
+    // The last-used app, or Bluesky: opening with the keyboard and pressing Enter repeats the usual choice.
+    items[0]?.firstElementChild?.setAttribute("autofocus", "");
+    this.#list.replaceChildren(...items);
+
+    this.#label.textContent = t("otherApp");
+    this.#input.placeholder = t("inputPlaceholder");
+    this.#input.value = pref && !findApp(pref) ? pref : "";
+    this.#clearInvalid();
+    this.#go.setAttribute("aria-label", t("go"));
+
+    if (!this.dialog.open) this.dialog.showModal();
+    // Older Safari may ignore autofocus inside a dialog.
+    if (!this.dialog.contains(document.activeElement)) (items[0]?.firstElementChild as HTMLElement | null)?.focus();
+  }
+
+  close(): void {
+    if (this.dialog.open) this.dialog.close();
+  }
+
+  /**
+   * Closed by a re-render, the opener is gone: focus the new main button, or,
+   * while a new thread loads and there is none, the element itself. The close
+   * event runs after the render, so the new button already exists.
+   */
+  #focusFallback(): void {
+    const host = this.#host;
+    if (!host.isConnected) return;
+    const main = host.querySelector<HTMLElement>(":scope > .atproto-app-action > .atproto-app-btn--xl");
+    if (main) {
+      main.focus();
+      return;
+    }
+    if (!host.hasAttribute("tabindex")) {
+      host.tabIndex = -1;
+      host.addEventListener("blur", () => host.removeAttribute("tabindex"), { once: true });
+    }
+    host.focus();
+  }
+
+  #clearInvalid(): void {
+    this.#input.setCustomValidity("");
+    this.#input.removeAttribute("aria-invalid");
+  }
+
+  #openCustom(): void {
+    const target = this.#target;
+    if (!target || !this.#loc) return;
+    this.#clearInvalid();
+    const domain = normalizeDomain(this.#input.value);
+    if (!domain) {
+      // The browser shows and announces the message.
+      this.#input.setCustomValidity(translate(this.#loc.strings, "invalidDomain"));
+      this.#input.setAttribute("aria-invalid", "true");
+      this.#input.reportValidity();
+      return;
+    }
+    writePref(domain);
+    window.open(appUrl(domain, { kind: "post", did: target.did, rkey: target.rkey }), "_blank", "noopener,noreferrer");
+    this.dialog.close();
+  }
+}
+
+function hiddenGlyph(text: string): HTMLSpanElement {
+  const span = document.createElement("span");
+  span.setAttribute("aria-hidden", "true");
+  span.textContent = text;
+  return span;
 }
 
 function renderError(loc: Loc): HTMLElement {
@@ -375,7 +358,7 @@ function renderError(loc: Loc): HTMLElement {
   return div;
 }
 
-function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLElement | null {
+function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc, open: OpenSheet): HTMLElement | null {
   if (view.$type !== "app.bsky.feed.defs#threadViewPost") return null;
   if (isReplyHidden(view.post, hidden)) return null;
 
@@ -396,9 +379,18 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   const header = document.createElement("header");
   header.className = "atproto-reply__header";
 
+  const authorDid = author.did ?? "";
+  const replyRkey = post.uri?.split("/").pop() ?? "";
+
   const parts = bylineParts(author, translate(loc.strings, "unknownAuthor"));
-  const byline = document.createElement("span");
+  // Without the author's DID there is nowhere to link to.
+  const byline = document.createElement(authorDid ? "a" : "span");
   byline.className = "atproto-reply__byline";
+  if (byline instanceof HTMLAnchorElement) {
+    setAppLink(byline, { kind: "profile", did: authorDid });
+    byline.target = "_blank";
+    byline.rel = "noopener noreferrer";
+  }
 
   const name = document.createElement("b");
   name.className = "atproto-reply__author";
@@ -420,7 +412,17 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
     time.dateTime = record.createdAt;
     time.textContent = formatRelativeTime(record.createdAt, loc.strings, loc.locale);
     time.title = formatAbsoluteDate(record.createdAt, loc.locale);
-    header.appendChild(time);
+    if (authorDid) {
+      const permalink = document.createElement("a");
+      permalink.className = "atproto-reply__permalink";
+      setAppLink(permalink, { kind: "post", did: authorDid, rkey: replyRkey });
+      permalink.target = "_blank";
+      permalink.rel = "noopener noreferrer";
+      permalink.appendChild(time);
+      header.appendChild(permalink);
+    } else {
+      header.appendChild(time);
+    }
   }
 
   content.appendChild(header);
@@ -430,16 +432,25 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   body.appendChild(buildFacetedText(record));
   content.appendChild(body);
 
-  const authorDid = author.did ?? "";
-  const replyRkey = post.uri?.split("/").pop() ?? "";
-  const replyAria = translate(loc.strings, "replyTo", { name: author.displayName ?? author.handle ?? "" });
-  content.appendChild(buildAppAction(translate(loc.strings, "reply"), authorDid, replyRkey, loc, undefined, replyAria));
+  // The same name the byline shows, so the button and the picker heading never read "Reply to  in…".
+  const replyName = parts.name;
+  const replyAria = translate(loc.strings, "replyTo", { name: replyName });
+  // Without the author's DID or the reply's rkey every app URL would be broken.
+  if (authorDid && replyRkey) {
+    content.appendChild(buildAppAction(
+      translate(loc.strings, "reply"),
+      { did: authorDid, rkey: replyRkey, replyTo: replyName },
+      open,
+      undefined,
+      replyAria,
+    ));
+  }
 
   const loadedReplies = view.replies ?? [];
-  if ((post.replyCount ?? 0) > loadedReplies.length) {
+  if (authorDid && replyRkey && (post.replyCount ?? 0) > loadedReplies.length) {
     const more = document.createElement("a");
     more.className = "atproto-reply__more";
-    setAppLink(more, { path: `/profile/${authorDid}/post/${replyRkey}`, anyApp: true });
+    setAppLink(more, { kind: "post", did: authorDid, rkey: replyRkey });
     more.target = "_blank";
     more.rel = "noopener noreferrer";
     more.textContent = translate(loc.strings, "viewMore");
@@ -451,7 +462,7 @@ function renderReply(view: ThreadViewPost, hidden: Set<string>, loc: Loc): HTMLE
   const subList = document.createElement("ol");
   subList.className = "atproto-reply__replies";
   for (const sub of sortedReplies(view.replies)) {
-    const child = renderReply(sub, hidden, loc);
+    const child = renderReply(sub, hidden, loc, open);
     if (child) subList.appendChild(child);
   }
   // No empty list when every nested reply is hidden.
@@ -469,12 +480,13 @@ type ThreadResult =
   | { kind: "error" }
   | { kind: "thread"; thread: ThreadViewPost | undefined; rootDid: string; rootRkey: string };
 
-function renderThread(result: ThreadResult, loc: Loc): HTMLElement[] {
+function renderThread(result: ThreadResult, loc: Loc, open: OpenSheet): HTMLElement[] {
   if (result.kind !== "thread") return [renderError(loc)];
 
   const { thread, rootDid, rootRkey } = result;
   const commentLabel = translate(loc.strings, "comment");
-  const comment = () => buildAppAction(commentLabel, rootDid, rootRkey, loc, "atproto-app-btn--xl");
+  const comment = () =>
+    buildAppAction(commentLabel, { did: rootDid, rkey: rootRkey, replyTo: null }, open, "atproto-app-btn--xl");
 
   if (
     !thread ||
@@ -492,7 +504,7 @@ function renderThread(result: ThreadResult, loc: Loc): HTMLElement[] {
   const list = document.createElement("ol");
   list.className = "atproto-comments__list";
   for (const reply of replies) {
-    const el = renderReply(reply, hidden, loc);
+    const el = renderReply(reply, hidden, loc, open);
     if (el) list.appendChild(el);
   }
   // Every reply hidden (threadgate, labels): show the button alone, as with no replies.
@@ -555,6 +567,13 @@ export class AtprotoComments extends Base {
   #viewDirty = false;
   /** Nodes inserted by the last render; page content inside the element is left alone. */
   #nodes: Node[] = [];
+  /** The app picker, created the first time it opens. Not in #nodes, so renders keep it. */
+  #sheet: AppSheet | null = null;
+  #openSheet: OpenSheet = (opener, target) => {
+    this.#sheet ??= new AppSheet(this);
+    if (this.#sheet.dialog.parentNode !== this) this.append(this.#sheet.dialog);
+    this.#sheet.open(opener, target, this.#loc());
+  };
 
   constructor() {
     super();
@@ -588,6 +607,9 @@ export class AtprotoComments extends Base {
 
   disconnectedCallback(): void {
     this.#abort();
+    // A removed dialog leaves the top layer but stays `open`; close it so it
+    // does not come back open if the element is inserted again.
+    this.#sheet?.close();
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
@@ -694,6 +716,8 @@ export class AtprotoComments extends Base {
   }
 
   #removeNodes(): void {
+    // The open picker could point at another thread or show stale strings.
+    this.#sheet?.close();
     for (const node of this.#nodes) (node as ChildNode).remove();
     this.#nodes = [];
   }
@@ -702,7 +726,7 @@ export class AtprotoComments extends Base {
     this.#removeNodes();
     this.#viewDirty = false;
     if (!this.#data) return;
-    this.#nodes = renderThread(this.#data, this.#loc());
+    this.#nodes = renderThread(this.#data, this.#loc(), this.#openSheet);
     this.append(...this.#nodes);
   }
 }

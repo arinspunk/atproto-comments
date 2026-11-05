@@ -6,7 +6,7 @@
 
 /** Text pieces of a reply byline. */
 export interface BylineParts {
-  /** Visible name: display name, else handle, else the `unknown` text. */
+  /** Visible name: display name, else handle, else the `unknown` text. Empty values count as missing. */
   name: string;
   /** `@handle`, or `null` when the author has no handle. */
   handle: string | null;
@@ -20,7 +20,8 @@ export interface BylineParts {
 /** Computes the byline pieces for an author; `unknown` names an author with no name or handle. */
 export function bylineParts(author: { displayName?: string; handle?: string }, unknown: string): BylineParts {
   return {
-    name: author.displayName ?? author.handle ?? unknown,
+    // An empty display name or handle counts as missing.
+    name: author.displayName || author.handle || unknown,
     handle: author.handle ? "@" + author.handle : null,
     separator: " ",
   };
