@@ -109,6 +109,8 @@ export function threadView(rkey, replies, hiddenReplies) {
 /** Init script that sets window.__thread[rkey] to `thread`. */
 export const withThread = (rkey, thread) => `(window.__thread ??= {})[${JSON.stringify(rkey)}] = ${JSON.stringify(thread)};`;
 export const MOD = `<script type="module" src="index.js"></script>`;
+/** The component's stylesheet, from dist/. */
+export const CSS_LINK = `<link rel="stylesheet" href="atproto-comments.css">`;
 
 const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml" };
 const typeOf = (f) => TYPES[f.slice(f.lastIndexOf("."))] ?? "application/octet-stream";

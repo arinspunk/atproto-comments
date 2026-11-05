@@ -88,3 +88,26 @@ Deno.test("bundled dictionaries have the same keys", () => {
 Deno.test("parseStringsAttr accepts the new keys", () => {
   assertEquals(parseStringsAttr('{"go":"Ir","unknownAuthor":"Anónimo"}'), { go: "Ir", unknownAuthor: "Anónimo" });
 });
+
+Deno.test("bundled dictionaries have the app sheet keys", () => {
+  assertEquals(
+    [I18N.en.commentIn, I18N.en.replyIn, I18N.en.pickerNote, I18N.en.close, I18N.en.lastUsed],
+    ["Comment in…", "Reply to {name} in…", "", "Close", "Last used"],
+  );
+  assertEquals(
+    [I18N.pt.commentIn, I18N.pt.replyIn, I18N.pt.pickerNote, I18N.pt.close, I18N.pt.lastUsed],
+    ["Comentar em…", "Responder a {name} em…", "", "Fechar", "Última usada"],
+  );
+});
+
+Deno.test("replyIn takes {name}, also in supplied strings", () => {
+  assertEquals(translate(buildStrings("en"), "replyIn", { name: "Ana" }), "Reply to Ana in…");
+  assertEquals(translate(buildStrings("pt"), "replyIn", { name: "Ana" }), "Responder a Ana em…");
+  const s = buildStrings("en", parseStringsAttr('{"replyIn":"Responder a {name} con…"}'));
+  assertEquals(translate(s, "replyIn", { name: "Ana" }), "Responder a Ana con…");
+});
+
+Deno.test("pickerNote can be set through strings", () => {
+  const s = buildStrings("en", parseStringsAttr('{"pickerNote":"Necesitas una cuenta para responder."}'));
+  assertEquals(s.pickerNote, "Necesitas una cuenta para responder.");
+});

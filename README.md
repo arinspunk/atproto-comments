@@ -12,8 +12,8 @@ atproto-comments is an independent project. It is not affiliated with or endorse
 ## Quick start
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/atproto-comments@1/dist/atproto-comments.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/atproto-comments@1/dist/index.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/atproto-comments@2/dist/atproto-comments.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/atproto-comments@2/dist/index.js"></script>
 
 <atproto-comments
   thread-uri="at://did:plc:xxxx/app.bsky.feed.post/yyyy"
@@ -30,7 +30,7 @@ The component **only displays** comments. Visitors write them from their own AT 
 2. Publish a post that links to it from your AT Protocol account. This is the *anchor post*.
 3. Pass the anchor post's AT URI to the component.
 
-When a visitor clicks **Comment** or **Reply**, the component lets them choose the app to reply from (Bluesky, Mu, Deer or any other domain) and opens the post there. It remembers that choice for next time.
+When a visitor clicks **Comment** or **Reply**, a panel slides up from the bottom of the window with the apps they can reply from: Bluesky, Anisota, Blacksky, Deer, Impro, Mu, Northsky and Red Dwarf, or any other domain they type. Choosing one opens the post there in a new tab. The component remembers that choice and lists it first next time, marked **Last used**. The panel closes with Escape, its close button or a click outside it.
 
 Any AT Protocol account works, whichever server (PDS) hosts it. We recommend **[Eurosky](https://eurosky.tech/)**, a PDS hosted in Europe under EU privacy law (GDPR), if data residency matters to you. You can use it with **[Mu](https://mu.social)** or any other AT Protocol app. Bluesky, which runs its own PDS and app at [bsky.app](https://bsky.app), is also a valid option.
 
@@ -75,12 +75,14 @@ async function toAtUri(postUrl) {
 
 ### CDN
 
-See [Quick start](#quick-start). `@1` gets every 1.x fix and feature, never a breaking 2.0. Use an exact version (`@1.4.0`) to update only when you choose.
+See [Quick start](#quick-start). `@2` gets every 2.x fix and feature, never a breaking 3.0. Use an exact version (`@2.0.0`) to update only when you choose.
+
+Upgrading from 1.x? The app picker and the reply header have new markup: see [Migrating from 1.x](CHANGELOG.md#migrating-from-1x) for the class changes.
 
 Without `type="module"`, load `dist/index.umd.js` instead. It registers the element the same way:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/atproto-comments@1/dist/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/atproto-comments@2/dist/index.umd.js"></script>
 ```
 
 ### npm
@@ -99,13 +101,13 @@ The package includes TypeScript types for `AtprotoComments`, `StringKey` and `Ui
 ### JSR (Deno)
 
 ```ts
-import 'jsr:@arinspunk/atproto-comments@1.4.0';
+import 'jsr:@arinspunk/atproto-comments@2.0.0';
 ```
 
 The stylesheet is published alongside the module. Link it from your page, pinning the same version as the import:
 
 ```html
-<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/1.4.0/src/atproto-comments.css">
+<link rel="stylesheet" href="https://jsr.io/@arinspunk/atproto-comments/2.0.0/src/atproto-comments.css">
 ```
 
 Or, in a static site generator, download it at build time. For example, in Lume:
@@ -113,7 +115,7 @@ Or, in a static site generator, download it at build time. For example, in Lume:
 ```ts
 site.remoteFile(
   "vendor/atproto-comments.css",
-  "https://jsr.io/@arinspunk/atproto-comments/1.4.0/src/atproto-comments.css",
+  "https://jsr.io/@arinspunk/atproto-comments/2.0.0/src/atproto-comments.css",
 );
 site.copy("vendor/atproto-comments.css");
 ```
@@ -146,7 +148,8 @@ Content you put inside the element yourself is kept; the component only replaces
 
 - Replies are listed oldest first, nested up to `max-depth` levels. When a reply has more replies than were loaded, a **View more replies** link appears under it.
 - Dates are shown as relative time (`5 m`, `3 d`), and replies more than a year old show the short date in the page's language (`1/2/20` in `en-US`, `02/01/20` in `pt-PT`). The full date and time appear on hover.
-- Links, mentions and hashtags in the text are clickable. Mentions and **View more replies** open in the app the visitor chose in the app picker, or on bsky.app if they haven't chosen one. Hashtags open in the chosen app if it is Bluesky, Mu or Deer; with a custom domain they open on bsky.app, since that app may not have hashtag pages.
+- Each reply's author (name and handle) links to their profile, and its date links to the reply itself. An author with no DID is shown without links.
+- Links, mentions and hashtags in the text are clickable. The author, the date, mentions and **View more replies** open in the app the visitor chose in the app picker, with that app's own profile and post routes, or on bsky.app if they haven't chosen one. A custom domain uses bsky.app's routes. Hashtags open in the chosen app if it is in the picker's list and has hashtag pages; otherwise (a listed app without them, or a custom domain) they open on bsky.app.
 - The anchor post itself is not shown, only its replies.
 - If the post has no replies, does not exist or is blocked, only the **Comment** button is shown. If the replies can't be loaded, an error message appears instead.
 
@@ -198,7 +201,12 @@ Invalid JSON, unknown keys and non-string values are ignored.
 | `comment` | `Comment` | Main button |
 | `reply` | `Reply` | Button under each reply |
 | `replyTo` | `Reply to {name}` | Accessible label of the reply button; `{name}` is the author |
-| `otherApp` | `Other app` | Separator in the app picker |
+| `commentIn` | `Comment in…` | Heading of the app picker opened from the main button |
+| `replyIn` | `Reply to {name} in…` | Heading of the app picker opened from a reply; `{name}` is the author |
+| `pickerNote` | _(empty)_ | Optional note under the app picker heading; nothing is shown while it is empty |
+| `close` | `Close` | Accessible name of the app picker's close button |
+| `lastUsed` | `Last used` | Badge on the app the visitor picked last time |
+| `otherApp` | `Other app` | Label of the custom app domain input |
 | `inputPlaceholder` | `app.example` | Placeholder of the custom app domain input |
 | `go` | `Open` | Accessible name of the `→` button that opens the custom app domain |
 | `invalidDomain` | `Invalid domain` | Message shown when the custom app domain is not valid |
@@ -284,14 +292,16 @@ For full CSS overrides, this is the structure the component generates:
         </div>
         <div class="atproto-reply__content">
           <header class="atproto-reply__header">
-            <span class="atproto-reply__byline">
+            <a class="atproto-reply__byline">          <!-- a <span> if the author has no DID -->
               <b class="atproto-reply__author">Name</b>
               <span class="atproto-reply__handle">@handle</span>
-            </span>
-            <time class="atproto-reply__time">3 d</time>
+            </a>
+            <a class="atproto-reply__permalink">       <!-- only if the author has a DID -->
+              <time class="atproto-reply__time">3 d</time>
+            </a>
           </header>
           <p class="atproto-reply__text">…</p>
-          <div class="atproto-app-action">…</div>      <!-- Reply button + app picker -->
+          <div class="atproto-app-action">…</div>      <!-- Reply button, as below -->
           <a class="atproto-reply__more">…</a>         <!-- only with unloaded replies -->
         </div>
         <ol class="atproto-reply__replies">
@@ -302,20 +312,36 @@ For full CSS overrides, this is the structure the component generates:
   </ol>
 
   <div class="atproto-app-action">
-    <button class="atproto-app-btn atproto-app-btn--xl">Comment</button>
-    <div class="atproto-app-popover">
-      <a class="atproto-app-popover__link atproto-app-popover__link--active">Bluesky</a>
-      <a class="atproto-app-popover__link">Mu</a>
-      <a class="atproto-app-popover__link">Deer</a>
-      <div class="atproto-app-popover__separator">Other app</div>
-      <div class="atproto-app-popover__custom">
-        <input class="atproto-app-popover__input">
-        <button class="atproto-app-popover__go" aria-label="Open"><span aria-hidden="true">→</span></button>
-      </div>
-    </div>
+    <button class="atproto-app-btn atproto-app-btn--xl" aria-haspopup="dialog">Comment</button>
   </div>
 
-  <!-- instead of the above, when loading fails: -->
+  <!-- the app picker: created the first time it opens, one per element -->
+  <dialog class="atproto-app-sheet" aria-labelledby="…">
+    <div class="atproto-app-sheet__body">
+      <div class="atproto-app-sheet__header">
+        <p class="atproto-app-sheet__title">Reply to Ana in…</p>
+        <button class="atproto-app-sheet__close" aria-label="Close"><span aria-hidden="true">×</span></button>
+      </div>
+      <p class="atproto-app-sheet__note">…</p>      <!-- only when pickerNote is not empty -->
+      <ul class="atproto-app-sheet__list">
+        <li>
+          <a class="atproto-app-sheet__app atproto-app-sheet__app--last-used">
+            <span class="atproto-app-sheet__name">Deer</span>
+            <span class="atproto-app-sheet__badge">Last used</span>
+            <span class="atproto-app-sheet__arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+        <li><a class="atproto-app-sheet__app">…</a></li>   <!-- one per app -->
+      </ul>
+      <div class="atproto-app-sheet__custom">
+        <label class="atproto-app-sheet__label">Other app</label>
+        <input class="atproto-app-sheet__input">
+        <button class="atproto-app-sheet__go" aria-label="Open"><span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- instead of the list and the button, when loading fails: -->
   <div class="atproto-comments__error" role="status">…</div>
 </atproto-comments>
 ```
@@ -326,12 +352,12 @@ Works in current versions of Chrome, Edge, Firefox and Safari, and in Safari on 
 
 | Feature used | Chrome / Edge | Firefox | Safari / iOS | Without it |
 |---|---|---|---|---|
-| [Popover API](https://developer.mozilla.org/en-US/docs/Web/API/Popover_API) | 114 | 125 | 17 | The component shows the app picker itself (see below) |
+| [`<dialog>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/dialog) | 37 | 98 | 15.4 | The app picker does not open |
 | `Intl.Segmenter` | 87 | 125 | 14.1 | Avatar placeholders show one initial instead of two for names in scripts without spaces (Chinese, Japanese, Thai) |
 | CSS `:has()` | 105 | 121 | 15.4 | Thread lines between nested replies are not drawn |
 | CSS `oklch()` | 111 | 113 | 15.4 | Default colors don't apply; set the `--atproto-*` variables |
 
-Browsers without the Popover API, such as every browser on iOS 16 and older, get the same app picker, shown and hidden by the component. That fallback panel is `position: fixed` with a high `z-index` and carries the extra class `.atproto-app-popover--fallback`. If you style `.atproto-app-popover:popover-open`, style that class too. Unlike the native popover, the fallback panel can be misplaced or covered if an ancestor of the component creates a containing block (`transform`, `filter`) or a stacking context (`z-index`, `opacity`, `isolation`).
+The app picker is a modal `<dialog>` in the top layer, so it shows above the page even inside an ancestor with `transform` or `z-index`. Its slide-in animation needs `@starting-style` (Chrome 117, Firefox 129, Safari 17.5) and runs only when the visitor has not asked for reduced motion; elsewhere the panel just appears.
 
 ## Privacy
 

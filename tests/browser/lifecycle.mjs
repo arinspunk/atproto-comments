@@ -172,26 +172,24 @@ const RAW = [
       return { withProp, calls: __calls, ...state() };
     },
     { withProp: ["B"], calls: ["1:A"], mainBtn: ["A"] }],
-  ["modo de respaldo: panel abierto, cambio de lang y clic fuera", `<atproto-comments thread-uri="${U("A")}"></atproto-comments>${MOD}`,
+  ["panel abierto y cambio de lang: se cierra y vuelve a abrir en el idioma nuevo", `<atproto-comments thread-uri="${U("A")}"></atproto-comments>${MOD}`,
     async () => {
       await sleep(200);
       const e = document.querySelector("atproto-comments");
-      const btn0 = e.querySelector(".atproto-app-btn--xl");
-      const pop0 = btn0.parentElement.querySelector(".atproto-app-popover--fallback");
-      btn0.click();
-      const opened = !pop0.hidden;
+      e.querySelector(".atproto-app-btn--xl").click();
+      const dialog = e.querySelector("dialog.atproto-app-sheet");
+      const opened = dialog.open;
       e.setAttribute("lang", "pt");
       await sleep(50);
-      document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      const oldClosed = pop0.hidden && !pop0.isConnected;
+      const closed = !dialog.open;
       const btn = e.querySelector(".atproto-app-btn--xl");
       btn.click();
-      const reopened = !btn.parentElement.querySelector(".atproto-app-popover--fallback").hidden;
-      return { opened, oldClosed, reopened, btn: btn.textContent };
+      const reopened = dialog.open && e.querySelectorAll("dialog").length === 1;
+      const title = dialog.querySelector(".atproto-app-sheet__title").textContent;
+      dialog.close();
+      return { opened, closed, reopened, title, btn: btn.textContent };
     },
-    { opened: true, oldClosed: true, reopened: true, btn: "Comentar" },
-    () => { delete HTMLElement.prototype.popover; }],
+    { opened: true, closed: true, reopened: true, title: "Comentar em…", btn: "Comentar" }],
 
   ["URL de la petición: appview sin barra final y max-depth", `<atproto-comments ${ATTRS}></atproto-comments>${MOD}`,
     async () => { await sleep(200); return { urls: window.__urls }; },

@@ -10,3 +10,6 @@ github-copy/
 # Browser tests (tests/browser)
 tests/browser/node_modules/
 tests/browser/svelte/dist/
+
+# macOS
+.DS_Store

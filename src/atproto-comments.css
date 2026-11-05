@@ -138,8 +138,32 @@ atproto-comments,
   color: var(--atproto-color-muted);
 }
 
-.atproto-reply__time::before {
-  content: "· ";
+/* Author and date link to the profile and the reply; they look as in 1.x
+   until hovered or focused. */
+a.atproto-reply__byline {
+  color: inherit;
+  text-decoration: none;
+}
+
+.atproto-reply__permalink {
+  color: var(--atproto-color-muted);
+  text-decoration: none;
+}
+
+a.atproto-reply__byline:hover,
+a.atproto-reply__byline:focus-visible,
+.atproto-reply__permalink:hover,
+.atproto-reply__permalink:focus-visible {
+  text-decoration: underline;
+}
+
+/* Outside the <time>, inside the link's box. Inline-block keeps the hover
+   underline off the separator; the non-breaking space survives it. Without a
+   link (no author DID) it goes on the <time>. */
+.atproto-reply__permalink::before,
+.atproto-reply__header > .atproto-reply__time::before {
+  content: "\00b7\00a0";
+  display: inline-block;
 }
 
 .atproto-reply__more {
@@ -155,9 +179,8 @@ atproto-comments,
   margin: 0.25rem 0 0;
 }
 
-/* App action (button + popover wrapper) */
+/* App action (the button that opens the app picker) */
 .atproto-app-action {
-  position: relative;
   margin-top: 0.25rem;
 }
 
@@ -183,93 +206,242 @@ atproto-comments,
   font-size: 1rem;
 }
 
-/* Popover */
-.atproto-app-popover {
-  margin: auto;
+/* App picker: a modal <dialog> anchored to the bottom of the viewport, full
+   width, with its content in a centred column. It lives in the light DOM, so
+   every element resets what page styles for p, ul, a, button and input could
+   change. */
+.atproto-app-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  box-sizing: border-box;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border: 0;
+  border-top: 1px solid var(--atproto-color-border);
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: Canvas;
+  color: CanvasText;
+  font-family: var(--atproto-font-family);
+  font-size: var(--atproto-font-size);
+  line-height: 1.5;
+  text-align: start;
+}
+
+@supports (max-height: 85dvh) {
+  .atproto-app-sheet {
+    max-height: 85dvh;
+  }
+}
+
+.atproto-app-sheet:not([open]) {
+  display: none;
+}
+
+.atproto-app-sheet::backdrop {
+  background: oklch(0% 0 0 / 40%);
+}
+
+.atproto-app-sheet__body {
+  box-sizing: border-box;
+  max-width: 36rem;
+  margin-inline: auto;
+  padding: 1rem;
+}
+
+.atproto-app-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+/* Inherited text styles the page may set on p, li, a, label, button or input. */
+.atproto-app-sheet,
+.atproto-app-sheet__title,
+.atproto-app-sheet__note,
+.atproto-app-sheet__list,
+.atproto-app-sheet__list > li,
+.atproto-app-sheet__app,
+.atproto-app-sheet__label,
+.atproto-app-sheet__input,
+.atproto-app-sheet__close,
+.atproto-app-sheet__go {
+  text-transform: none;
+  letter-spacing: normal;
+  text-shadow: none;
+  text-indent: 0;
+}
+
+.atproto-app-sheet__title,
+.atproto-app-sheet__note {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.atproto-app-sheet__title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.atproto-app-sheet__note {
+  margin: 0 0 0.75rem;
+  color: var(--atproto-color-muted);
+}
+
+.atproto-app-sheet__close,
+.atproto-app-sheet__go {
+  box-sizing: border-box;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  margin: 0;
+  padding: 0 0.5rem;
+  border: 1px solid var(--atproto-color-border);
+  border-radius: 0.5em;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+
+.atproto-app-sheet__close {
+  border-color: transparent;
+}
+
+.atproto-app-sheet__close:hover,
+.atproto-app-sheet__go:hover {
+  background: var(--atproto-color-surface);
+}
+
+.atproto-app-sheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.atproto-app-sheet__list > li {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  list-style: none;
+}
+
+.atproto-app-sheet__list > li::before,
+.atproto-app-sheet__list > li::marker {
+  content: none;
+}
+
+.atproto-app-sheet__app {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--atproto-color-border);
+  border-radius: 0.5em;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+}
+
+.atproto-app-sheet__app:hover,
+.atproto-app-sheet__app:focus-visible,
+.atproto-app-sheet__app--last-used {
+  background: var(--atproto-color-surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.atproto-app-sheet__name {
+  font-weight: 600;
+}
+
+.atproto-app-sheet__badge {
+  padding: 0 0.5em;
+  border: 1px solid var(--atproto-color-border);
+  border-radius: 999px;
+  color: var(--atproto-color-muted);
+  font-size: 0.75rem;
+}
+
+.atproto-app-sheet__arrow {
+  margin-inline-start: auto;
+  color: var(--atproto-color-muted);
+}
+
+.atproto-app-sheet__custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.atproto-app-sheet__label {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--atproto-color-muted);
+  font: inherit;
+}
+
+.atproto-app-sheet__input {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  min-height: 2.25rem;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
   border: 1px solid var(--atproto-color-border);
   border-radius: 0.5em;
   background: Canvas;
-  padding: 0.25rem;
-  min-width: 160px;
-  box-shadow: 0 4px 12px oklch(0% 0 0 / 12%);
-}
-
-.atproto-app-popover:popover-open {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-/* Fallback panel for browsers without the Popover API (e.g. iOS < 17).
-   Kept out of the :popover-open rule: browsers that don't know that
-   pseudo-class drop every selector in the same list. */
-.atproto-app-popover--fallback {
-  position: fixed;
-  z-index: 2147483647;
+  box-shadow: none;
   color: CanvasText;
-  overflow: auto;
+  font: inherit;
 }
 
-.atproto-app-popover--fallback:not([hidden]) {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
+/* Slides in from the bottom where @starting-style exists; elsewhere it just appears. */
+@media (prefers-reduced-motion: no-preference) {
+  .atproto-app-sheet[open] {
+    transform: translateY(0);
+    transition: transform 0.2s ease-out;
+  }
 
-.atproto-app-popover__link {
-  display: block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25em;
-  color: var(--atproto-color-text);
-  text-decoration: none;
-  font-family: var(--atproto-font-family);
-  font-size: var(--atproto-font-size);
-}
-
-.atproto-app-popover__link:hover,
-.atproto-app-popover__link--active {
-  background: var(--atproto-color-surface);
-}
-
-.atproto-app-popover__separator {
-  font-family: var(--atproto-font-family);
-  font-size: var(--atproto-font-size);
-  color: var(--atproto-color-muted);
-  padding: 0.25rem 0.5rem 0;
-  border-top: 1px solid var(--atproto-color-border);
-  margin-top: 0.25rem;
-}
-
-.atproto-app-popover__custom {
-  display: flex;
-  gap: 0.25rem;
-  padding: 0 0.25rem;
-}
-
-.atproto-app-popover__input {
-  flex: 1;
-  font-family: var(--atproto-font-family);
-  font-size: var(--atproto-font-size);
-  border: 1px solid var(--atproto-color-border);
-  border-radius: 0.25em;
-  padding: 0.25rem;
-  background: Canvas;
-  color: CanvasText;
-  min-width: 0;
-}
-
-.atproto-app-popover__go {
-  background: none;
-  border: 1px solid var(--atproto-color-border);
-  border-radius: 0.25em;
-  cursor: pointer;
-  font-family: var(--atproto-font-family);
-  font-size: var(--atproto-font-size);
-  color: var(--atproto-color-text);
-  padding: 0.25rem;
-  line-height: 1;
-}
-
-.atproto-app-popover__go:hover {
-  background: var(--atproto-color-surface);
+  @starting-style {
+    .atproto-app-sheet[open] {
+      transform: translateY(100%);
+    }
+  }
 }

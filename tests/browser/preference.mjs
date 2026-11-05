@@ -79,7 +79,7 @@ export const scenarios = [
       await page.click("atproto-comments > .atproto-app-action .atproto-app-btn--xl");
       await page.waitForTimeout(100);
       await page.evaluate(() => document.addEventListener("click", (e) => e.preventDefault(), { once: true }));
-      await page.click("atproto-comments > .atproto-app-action .atproto-app-popover__link:has-text('Mu')");
+      await page.click("atproto-comments .atproto-app-sheet__app:has-text('Mu')");
       await page.waitForTimeout(100);
       return { before, mention: await hrefOnClick(page, MENTION) };
     },
@@ -104,6 +104,16 @@ export const scenarios = [
       return { tag: await hrefOnClick(page, TAG) };
     },
     expected: { tag: "https://deer.social/hashtag/tag" },
+  },
+  {
+    name: "hashtag con una app sin ruta de hashtag (Anisota): en bsky.app; la mención, en Anisota",
+    body: BODY,
+    init: withThread("L", LINKS) + pref("anisota.net"),
+    run: async (page) => {
+      await page.waitForTimeout(200);
+      return { tag: await hrefOnClick(page, TAG), mention: await hrefOnClick(page, MENTION) };
+    },
+    expected: { tag: "https://bsky.app/hashtag/tag", mention: `https://anisota.net/profile/${BOB}` },
   },
   {
     name: "hashtag con un dominio personalizado: en bsky.app",
