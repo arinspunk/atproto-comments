@@ -74,7 +74,7 @@
 ## 6. Verificación integrada
 
 - [x] 6.1 Ejecutar `npx tsc --noEmit`, `deno task check`, `deno task test`, `npm run build`, `npm run check:versions`, `npm run test:browser` y `deno publish --dry-run --allow-dirty`, y verificar que pasan
-- [ ] 6.2 Verificar a mano con `tests/browser/server.mjs` en Firefox y Safari de escritorio, en iOS 16 y en iOS 17:
+- [x] 6.2 Verificar a mano con `tests/browser/server.mjs` en Firefox y Safari de escritorio, en iOS 16 y en iOS 17:
   - el panel se abre anclado abajo y se cierra con Escape, con el botón de cerrar y al tocar fuera;
   - escribir en «Other app» con el teclado virtual no lo cierra y el campo queda visible;
   - el foco vuelve al botón;
@@ -85,6 +85,13 @@
   - al cerrar el panel cambiando `lang` (`picker.html`, botón «lang → pt»), el foco queda en el nuevo «Comentar» y VoiceOver lo anuncia.
 
   Apuntar el resultado en esta tarea
+
+  Resultado (2026-11-05), en Firefox y Safari de escritorio, iOS 16 e iOS 17:
+  - ✅ `picker.html`: apertura, cierre (Escape, ×, fuera), foco de vuelta al botón, «Last used», «Other app», scroll y redimensionado, cambio de `lang`.
+  - ✅ iOS 16 e iOS 17: «Other app» con el teclado virtual.
+  - ✅ `links.html`: autor, fecha, mención, hashtag y «View more» abren en la app elegida; Anisota manda el hashtag a bsky.app.
+  - ✅ `hostile.html`: el panel no hereda los estilos de la página y queda por encima del ancestro con `transform`/`z-index`.
+  - ⏭️ VoiceOver (iOS 16 y Safari de macOS): sin verificar, por decisión del usuario. Siguen sin comprobar el anuncio de `aria-haspopup="dialog"` (escenario «Sin rol de menú») y el anuncio de «Comentar» tras el cambio de `lang`.
 
 ## Workflow follow-up
 
