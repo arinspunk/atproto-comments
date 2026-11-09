@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/arinspunk/atproto-comments/main/.github/banner.jpg" alt="Detail of Renoir's Luncheon of the Boating Party with Bluesky-style comments overlaid on the figures and a speech bubble reading at://" width="100%">
+</p>
+
 # atproto-comments
 
 [![npm](https://img.shields.io/npm/v/atproto-comments)](https://www.npmjs.com/package/atproto-comments)
